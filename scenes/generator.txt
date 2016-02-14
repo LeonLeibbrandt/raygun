@@ -1,0 +1,37 @@
+# (optional, default 320 240) size = size of the final image
+size 800 600
+
+nbounces 1 
+
+# (optional, default 1) oversampling=1 no oversampling
+oversampling 3
+
+# (optional, default 60) vision = size of the visual field
+vision 80
+
+# (optional, default all span) renderslice: start_rendering_line end_rendering_line
+# renderslice note: if you use oversampling>1 it may give problems
+#renderslice 10 40
+
+
+cameraPos 5.0 8.6 10.0
+cameraLook 0.0 0.0 0.0
+cameraUp 0.0 0.0 1.0
+
+# light: x y z  r g b  point/ambient   (rgb are in [0,1])
+# light -2.0 1.0 4.0  1.0 1.0 1.0 point
+light 10.0 15.0 15.0  1.0 1.0 1.0 point
+light 0.0 0.0 5.0   0.1 0.1 0.1 ambient
+
+# material: r g b difuseCol specularCol specularD reflectionCol transmitCol IOR
+# Ground
+material 0.7 0.7 0.5   0.9 0.0 0.0 0.0 0.9 0.0
+# Grey
+material 0.8 0.8 0.8   1.0 0.0 0.0 0.9 0.9 0.0
+
+# plane: material pos_x pos_y pos_z normal_x normal_y normal_z distance:
+plane 0 0.0 0.0 0.0 0.0 0.0 1.0 0.0
+
+# Fence
+cube 1 -0.05 -0.05 0.0 0.05 0.05 5.0
+cube 1 0.9 -0.1 0.0 1.1 0.1 5.0
