@@ -4,17 +4,17 @@ size 800 600
 nbounces 1 
 
 # (optional, default 1) oversampling=1 no oversampling
-oversampling 3
+oversampling 2
 
 # (optional, default 60) vision = size of the visual field
-vision 80
+vision 60
 
 # (optional, default all span) renderslice: start_rendering_line end_rendering_line
 # renderslice note: if you use oversampling>1 it may give problems
 #renderslice 10 40
 
 
-cameraPos 5.0 8.6 10.0
+cameraPos 20.0 20.0 20.0
 cameraLook 0.0 0.0 0.0
 cameraUp 0.0 0.0 1.0
 
@@ -33,5 +33,12 @@ material 0.8 0.8 0.8   1.0 0.0 0.0 0.9 0.9 0.0
 plane 0 0.0 0.0 0.0 0.0 0.0 1.0 0.0
 
 # Fence
-cube 1 -0.05 -0.05 0.0 0.05 0.05 5.0
-cube 1 0.9 -0.1 0.0 1.1 0.1 5.0
+# Center
+cube 1 0.0 0.0 0.05 0.05 0.05 5.0
+
+# Corners
+cube 1 -10.0 10.0 0.0 0.05 0.05 10.0
+cube 1 -10.0 -10.0 0.0 0.05 0.05 10.0
+cube 1 10.0 -10.0 0.0 0.05 0.05 10.0
+cube 1 10.0 10.0 0.0 0.05 0.05 10.0
+cube 1 0.0 -10.0 1.0 20.0 0.05 0.05

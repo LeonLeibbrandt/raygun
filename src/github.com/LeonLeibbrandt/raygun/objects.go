@@ -12,39 +12,39 @@ const EPS = 1e-9
 // Object
 type Object interface {
 	Type() string
-	Material() int
+	MaterialIndex() int
 	Intersect(r *Ray, i int) bool
-	getNormal(point Vector) Vector
+	getNormal(point *Vector) *Vector
 }
 
 // Sphere
 type Sphere struct {
-	material int
-	position Vector
-	radius   float64
+	Material int
+	Position *Vector
+	Radius   float64
 }
 
 func NewSphere(x, y, z, r float64, m int) *Sphere {
 	return &Sphere{
-		material: m,
-		position: Vector{x, y, z},
-		radius:   r,
+		Material: m,
+		Position: &Vector{x, y, z},
+		Radius:   r,
 	}
 }
 
-func (e Sphere) Type() string {
+func (e *Sphere) Type() string {
 	return "sphere"
 }
 
-func (e Sphere) Material() int {
-	return e.material
+func (e *Sphere) MaterialIndex() int {
+	return e.Material
 }
 
-func (e Sphere) Intersect(r *Ray, i int) bool {
+func (e *Sphere) Intersect(r *Ray, i int) bool {
 	a := r.direction.Dot(r.direction)
-	X := r.origin.Sub(e.position)
+	X := r.origin.Sub(e.Position)
 	b := 2 * (r.direction.Dot(X))
-	c := X.Dot(X) - e.radius*e.radius
+	c := X.Dot(X) - e.Radius*e.Radius
 	if b*b < 4*a*c {
 		return false
 	}
@@ -72,57 +72,56 @@ func (e Sphere) Intersect(r *Ray, i int) bool {
 	return true
 }
 
-func (e Sphere) getNormal(point Vector) Vector {
-	normal := point.Sub(e.position)
+func (e *Sphere) getNormal(point *Vector) *Vector {
+	normal := point.Sub(e.Position)
 	return normal.Normalize()
 }
 
-func (e Sphere) String() string {
-	return fmt.Sprintf("<Esf: %d %s %.2f>", e.material, e.position.String(), e.radius)
+func (e *Sphere) String() string {
+	return fmt.Sprintf("<Esf: %d %s %.2f>", e.Material, e.Position.String(), e.Radius)
 }
 
 // PLANE
 type Plane struct {
-	material int
-	position Vector
-	normal   Vector
+	Material int
+	Position *Vector
+	Normal   *Vector
 	distance float64
 }
 
 func NewPlane(xp, yp, zp, xn, yn, zn, d float64, m int) *Plane {
 	return &Plane{
-		material: m,
-		position: Vector{xp, yp, zp},
-		normal:   Vector{xn, yn, zn}.Normalize(),
+		Material: m,
+		Position: &Vector{xp, yp, zp},
+		Normal:   (&Vector{xn, yn, zn}).Normalize(),
 		distance: d,
 	}
 }
 
-func (p Plane) Type() string {
+func (p *Plane) Type() string {
 	return "plane"
 }
 
-func (p Plane) Material() int {
-	return p.material
+func (p *Plane) MaterialIndex() int {
+	return p.Material
 }
 
-func (p Plane) Intersect(r *Ray, i int) bool {
-	v := p.normal.Dot(r.direction)
+func (p *Plane) Intersect(r *Ray, i int) bool {
+	v := p.Normal.Dot(r.direction)
 	if v == 0 {
 		return false
 	}
-	t := p.normal.Dot(p.position.Sub(r.origin)) / v
+	t := p.Normal.Dot(p.Position.Sub(r.origin)) / v
 	if t < 0.0 || t > r.interDist {
 		return false
 	}
 	if p.distance > 0.0 {
 		// We have a disc
 		interPoint := r.origin.Add(r.direction.Mul(t))
-		dist := interPoint.Sub(p.position).Module()
+		dist := interPoint.Sub(p.Position).Module()
 		if dist > p.distance {
 			return false
 		}
-		// fmt.Printf("%v %v %v %v %v\n", interPoint, dist, p.distance, r.interDist, t)
 	}
 
 	r.interDist = t
@@ -131,40 +130,47 @@ func (p Plane) Intersect(r *Ray, i int) bool {
 
 }
 
-func (p Plane) getNormal(point Vector) Vector {
-	return p.normal
+func (p *Plane) getNormal(point *Vector) *Vector {
+	return p.Normal
 }
 
-func (p Plane) String() string {
-	return fmt.Sprintf("<Pla: %d %s %.2f>", p.material, p.normal.String(), p.distance)
+func (p *Plane) String() string {
+	return fmt.Sprintf("<Pla: %d %s %.2f>", p.Material, p.Normal.String(), p.distance)
 }
 
 // Cube
 
 type Cube struct {
-	material int
-	min      Vector
-	max      Vector
+	Material int
+	Position *Vector
+	Width    float64
+	Height   float64
+	Depth    float64
+	min      *Vector
+	max      *Vector
 }
 
 func NewCube(x, y, z, w, h, d float64, m int) *Cube {
-	return &Cube{
-		material: m,
-		min:      Vector{x - w/2.0, y - h/2.0, z - d/2.0},
-		max:      Vector{x + w/2.0, y + h/2.0, z + d/2.0},
+	c := &Cube{
+		Material: m,
+		Position: &Vector{x, y, z},
+		Width:    w, // x direction
+		Height:   h, // y direction
+		Depth:    d, // z direction
 	}
-
+	c.initMinMax()
+	return c
 }
 
-func (c Cube) Type() string {
+func (c *Cube) Type() string {
 	return "cube"
 }
 
-func (c Cube) Material() int {
-	return c.material
+func (c *Cube) MaterialIndex() int {
+	return c.Material
 }
 
-func (c Cube) Intersect(r *Ray, i int) bool {
+func (c *Cube) Intersect(r *Ray, i int) bool {
 	n := c.min.Sub(r.origin).Div(r.direction)
 	f := c.max.Sub(r.origin).Div(r.direction)
 	n, f = n.Min(f), n.Max(f)
@@ -181,55 +187,69 @@ func (c Cube) Intersect(r *Ray, i int) bool {
 	return false
 }
 
-func (c Cube) getNormal(p Vector) Vector {
+func (c *Cube) getNormal(p *Vector) *Vector {
+
 	switch {
 	case p.x < c.min.x+EPS:
-		return Vector{-1, 0, 0}
+		return &Vector{-1, 0, 0}
 	case p.x > c.max.x-EPS:
-		return Vector{1, 0, 0}
+		return &Vector{1, 0, 0}
 	case p.y < c.min.y+EPS:
-		return Vector{0, -1, 0}
+		return &Vector{0, -1, 0}
 	case p.y > c.max.y-EPS:
-		return Vector{0, 1, 0}
+		return &Vector{0, 1, 0}
 	case p.z < c.min.z+EPS:
-		return Vector{0, 0, -1}
+		return &Vector{0, 0, -1}
 	case p.z > c.max.z-EPS:
-		return Vector{0, 0, 1}
+		return &Vector{0, 0, 1}
 	}
-	return Vector{0, 1, 0}
+	return &Vector{0, 1, 0}
+}
+
+func (c *Cube) initMinMax() {
+	c.min = &Vector{
+		c.Position.x - c.Width/2.0,
+		c.Position.y - c.Height/2.0,
+		c.Position.z - c.Depth/2.0,
+	}
+	c.max = &Vector{
+		c.Position.x + c.Width/2.0,
+		c.Position.y + c.Height/2.0,
+		c.Position.z + c.Depth/2.0,
+	}
 }
 
 type Cylinder struct {
-	material  int
-	position  Vector
-	direction Vector
-	length    float64
-	radius    float64
+	Material  int
+	Position  *Vector
+	Direction *Vector
+	Length    float64
+	Radius    float64
 }
 
 func NewCylinder(xp, yp, zp, xd, yd, zd, l, r float64, m int) *Cylinder {
 	return &Cylinder{
-		material:  m,
-		position:  Vector{xp, yp, zp},
-		direction: Vector{xd, yd, zd}.Normalize(),
-		length:    l,
-		radius:    r,
+		Material:  m,
+		Position:  &Vector{xp, yp, zp},
+		Direction: (&Vector{xd, yd, zd}).Normalize(),
+		Length:    l,
+		Radius:    r,
 	}
 }
 
-func (y Cylinder) Type() string {
+func (y *Cylinder) Type() string {
 	return "cylinder"
 }
 
-func (y Cylinder) Material() int {
-	return y.material
+func (y *Cylinder) MaterialIndex() int {
+	return y.Material
 }
 
 // http://blog.makingartstudios.com/?p=286
-func (y Cylinder) Intersect(r *Ray, i int) bool {
-	cylend := y.position.Add(y.direction.Mul(y.length))
-	AB := cylend.Sub(y.position)
-	AO := r.origin.Sub(y.position)
+func (y *Cylinder) Intersect(r *Ray, i int) bool {
+	cylend := y.Position.Add(y.Direction.Mul(y.Length))
+	AB := cylend.Sub(y.Position)
+	AO := r.origin.Sub(y.Position)
 
 	AB_dot_d := AB.Dot(r.direction)
 	AB_dot_AO := AB.Dot(AO)
@@ -243,7 +263,7 @@ func (y Cylinder) Intersect(r *Ray, i int) bool {
 
 	a := Q.Dot(Q)
 	b := 2.0 * Q.Dot(R)
-	c := R.Dot(R) - y.radius*y.radius
+	c := R.Dot(R) - y.Radius*y.Radius
 
 	if a == 0.0 {
 		return false
@@ -292,24 +312,24 @@ func (y Cylinder) Intersect(r *Ray, i int) bool {
 	return true
 
 }
-func (y Cylinder) intersectCap(r *Ray, i int, start bool) bool {
-	var pos Vector
-	var dir Vector
+func (y *Cylinder) intersectCap(r *Ray, i int, start bool) bool {
+	var pos *Vector
+	var dir *Vector
 	if start {
-		pos = y.position
-		dir = y.direction.Mul(-1)
+		pos = y.Position
+		dir = y.Direction.Mul(-1)
 	} else {
-		pos = y.position.Add(y.direction.Mul(y.length))
-		dir = y.direction
+		pos = y.Position.Add(y.Direction.Mul(y.Length))
+		dir = y.Direction
 	}
 
-	end := Plane{y.material, pos, dir, y.radius}
+	end := Plane{y.Material, pos, dir, y.Radius}
 	return end.Intersect(r, i)
 }
 
-func (y Cylinder) getNormal(point Vector) Vector {
-	PQ := point.Sub(y.position)
-	pqa := PQ.Dot(y.direction)
-	PQAA := y.direction.Mul(pqa)
+func (y *Cylinder) getNormal(point *Vector) *Vector {
+	PQ := point.Sub(y.Position)
+	pqa := PQ.Dot(y.Direction)
+	PQAA := y.Direction.Mul(pqa)
 	return PQ.Sub(PQAA).Normalize()
 }

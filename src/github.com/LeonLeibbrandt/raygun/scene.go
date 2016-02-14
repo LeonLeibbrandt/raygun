@@ -22,13 +22,13 @@ type Scene struct {
 	endline      int
 	gridWidth    int
 	gridHeight   int
-	cameraPos    Vector
-	cameraLook   Vector
-	cameraUp     Vector
-	look         Vector
-	Vhor         Vector
-	Vver         Vector
-	Vp           Vector
+	cameraPos    *Vector
+	cameraLook   *Vector
+	cameraUp     *Vector
+	look         *Vector
+	Vhor         *Vector
+	Vver         *Vector
+	Vp           *Vector
 	image        *image.RGBA
 	objectList   []Object
 	lightList    []Light
@@ -111,27 +111,33 @@ func NewScene(sceneFilename string) *Scene {
 
 		case "sphere":
 			mat, _ := strconv.Atoi(data[0])
+			pos := ParseVector(data[1:4])
 			rad, _ := strconv.ParseFloat(data[4], 64)
-			scn.objectList = append(scn.objectList, Sphere{mat, ParseVector(data[1:4]), rad})
+
+			scn.objectList = append(scn.objectList, NewSphere(pos.x, pos.y, pos.z, rad, mat))
 
 		case "plane":
 			mat, _ := strconv.Atoi(data[0])
 			dis, _ := strconv.ParseFloat(data[7], 64)
-			scn.objectList = append(scn.objectList, Plane{mat, ParseVector(data[1:4]),
-				ParseVector(data[4:7]), dis})
+			pos := ParseVector(data[1:4])
+			nor := ParseVector(data[4:7])
+			scn.objectList = append(scn.objectList, NewPlane(pos.x, pos.y, pos.z, nor.x, nor.y, nor.z, dis, mat))
 
 		case "cube":
 			mat, _ := strconv.Atoi(data[0])
-			scn.objectList = append(scn.objectList, Cube{mat, ParseVector(data[1:4]),
-				ParseVector(data[4:7])})
+			pos := ParseVector(data[1:4])
+			width, _ := strconv.ParseFloat(data[4], 64)
+			height, _ := strconv.ParseFloat(data[5], 64)
+			depth, _ := strconv.ParseFloat(data[6], 64)
+			scn.objectList = append(scn.objectList, NewCube(pos.x, pos.y, pos.z, width, height, depth, mat))
 
 		case "cylinder":
 			mat, _ := strconv.Atoi(data[0])
+			pos := ParseVector(data[1:4])
+			dir := ParseVector(data[4:7])
 			len, _ := strconv.ParseFloat(data[7], 64)
 			rad, _ := strconv.ParseFloat(data[8], 64)
-			scn.objectList = append(scn.objectList, Cylinder{mat,
-				ParseVector(data[1:4]),
-				ParseVector(data[4:7]), len, rad})
+			scn.objectList = append(scn.objectList, NewCylinder(pos.x, pos.y, pos.z, dir.x, dir.y, dir.z, len, rad, mat))
 
 		case "light":
 			light := Light{ParseVector(data[0:3]), ParseColor(data[3:6]), data[6]}
@@ -173,16 +179,15 @@ func NewScene(sceneFilename string) *Scene {
 	Vp.z = Vp.z*fl - 0.5*(float64(scn.gridWidth)*scn.Vhor.z+float64(scn.gridHeight)*scn.Vver.z)
 
 	scn.Vp = Vp
-
 	return scn
 }
 
 // Auxiliary Methods
-func ParseVector(line []string) Vector {
+func ParseVector(line []string) *Vector {
 	x, _ := strconv.ParseFloat(line[0], 64)
 	y, _ := strconv.ParseFloat(line[1], 64)
 	z, _ := strconv.ParseFloat(line[2], 64)
-	return Vector{x, y, z}
+	return &Vector{x, y, z}
 }
 
 func ParseColor(line []string) Color {

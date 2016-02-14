@@ -70,7 +70,7 @@ func (rg *RayGun) calcShadow(r *Ray, collisionObj int) float64 {
 		r.interDist = MAX_DIST
 
 		if obj.Intersect(r, i) && i != collisionObj {
-			shadow *= rg.Scene.materialList[obj.Material()].transmitCol
+			shadow *= rg.Scene.materialList[obj.MaterialIndex()].transmitCol
 		}
 	}
 	return shadow
@@ -83,7 +83,7 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 	}
 
 	if r.interObj >= 0 {
-		matIndex := rg.Scene.objectList[r.interObj].Material()
+		matIndex := rg.Scene.objectList[r.interObj].MaterialIndex()
 		interPoint := r.origin.Add(r.direction.Mul(r.interDist))
 		incidentV := interPoint.Sub(r.origin)
 		originBackV := r.direction.Mul(-1.0)
@@ -164,7 +164,7 @@ func (rg *RayGun) renderPixel(line chan int, done chan bool) {
 			xo := x * rg.Scene.oversampling
 			for i := 0; i < rg.Scene.oversampling; i++ {
 				for j := 0; j < rg.Scene.oversampling; j++ {
-					var dir Vector
+					dir := &Vector{}
 					dir.x = float64(xo)*rg.Scene.Vhor.x + float64(yo)*rg.Scene.Vver.x + rg.Scene.Vp.x
 					dir.y = float64(xo)*rg.Scene.Vhor.y + float64(yo)*rg.Scene.Vver.y + rg.Scene.Vp.y
 					dir.z = float64(xo)*rg.Scene.Vhor.z + float64(yo)*rg.Scene.Vver.z + rg.Scene.Vp.z

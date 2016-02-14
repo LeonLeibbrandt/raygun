@@ -1,7 +1,7 @@
 package raygun
 
 type Light struct {
-	position Vector
+	position *Vector
 	color    Color
 	kind     string
 }
