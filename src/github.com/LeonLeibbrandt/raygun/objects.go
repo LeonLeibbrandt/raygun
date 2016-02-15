@@ -210,12 +210,12 @@ func (c *Cube) initMinMax() {
 	c.min = &Vector{
 		c.Position.x - c.Width/2.0,
 		c.Position.y - c.Height/2.0,
-		c.Position.z - c.Depth/2.0,
+		c.Position.z,
 	}
 	c.max = &Vector{
 		c.Position.x + c.Width/2.0,
 		c.Position.y + c.Height/2.0,
-		c.Position.z + c.Depth/2.0,
+		c.Position.z + c.Depth,
 	}
 }
 
@@ -299,12 +299,20 @@ func (y *Cylinder) Intersect(r *Ray, i int) bool {
 	t_k := t*m + n
 	if t_k < 0.0 {
 		// Could be on start cap
-		return false // y.intersectCap(r, i, true)
+		if y.intersectCap(r, i, true) && t1 > r.interDist {
+			t = t1
+		} else {
+			return false // y.intersectCap(r, i, true)
+		}
 	}
 
 	if t_k > 1.0 {
 		// Could be on end cap
-		return false // y.intersectCap(r, i, false)
+		if y.intersectCap(r, i, false) && t1 > r.interDist {
+			t = t1
+		} else {
+			return false // y.intersectCap(r, i, true)
+		}
 	}
 
 	r.interDist = t
