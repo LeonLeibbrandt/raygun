@@ -14,7 +14,7 @@ vision 80
 #renderslice 10 40
 
 
-cameraPos 10.0 0.0 10.0
+cameraPos 10.0 1.0 10.0
 cameraLook 0.0 0.0 0.0
 cameraUp 0.0 0.0 1.0
 
@@ -25,8 +25,8 @@ sphere 4 0.0 0.0 1.0 1.0
 sphere 0 -1.0 1.5 0.5 0.5
 
 # cube: material min_x min_y min_z max_x max_y max_z
-cube 2 -3.0 -3.0 0.0 -1.0 -1.0 3.0
-cube 2 -4.0 -4.0 0.0 0.0 0.0 2.0
+cube 2 -3.0 -3.0 0.0 2.0 2.0 3.0
+cube 2 -4.0 -4.0 0.0 4.0 4.0 2.0
 
 # cylinder: material pos_x pos_y pos_z dir_x dir_y dir_z length radius
 cylinder 1 -5.0 3.0 1.0 1.0 0.0 0.0 4.0 1.0
@@ -46,7 +46,7 @@ plane 1 0.0 0.0 0.0 0.0 0.0 1.0 0.0
 
 # light: x y z  r g b  point/ambient   (rgb are in [0,1])
 # light -2.0 1.0 4.0  1.0 1.0 1.0 point
-light 10.0 15.0 15.0  1.0 1.0 1.0 point
+light 15.0 20.0 15.0  1.0 1.0 1.0 point
 light 0.0 0.0 5.0   0.1 0.1 0.1 ambient
 
 # material: r g b difuseCol specularCol specularD reflectionCol transmitCol IOR

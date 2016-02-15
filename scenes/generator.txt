@@ -7,21 +7,20 @@ nbounces 1
 oversampling 2
 
 # (optional, default 60) vision = size of the visual field
-vision 60
+vision 25
 
 # (optional, default all span) renderslice: start_rendering_line end_rendering_line
 # renderslice note: if you use oversampling>1 it may give problems
 #renderslice 10 40
 
 
-cameraPos 20.0 20.0 20.0
+cameraPos 20.0 15.0 40.0
 cameraLook 0.0 0.0 0.0
 cameraUp 0.0 0.0 1.0
 
 # light: x y z  r g b  point/ambient   (rgb are in [0,1])
-# light -2.0 1.0 4.0  1.0 1.0 1.0 point
-light 10.0 15.0 15.0  1.0 1.0 1.0 point
-light 0.0 0.0 5.0   0.1 0.1 0.1 ambient
+light 400.0 200.0 300.0  1.0 1.0 1.0 point
+light 40.0 20.0 5.0   0.1 0.1 0.1 ambient
 
 # material: r g b difuseCol specularCol specularD reflectionCol transmitCol IOR
 # Ground
@@ -34,26 +33,37 @@ plane 0 0.0 0.0 0.0 0.0 0.0 1.0 0.0
 
 # Fence
 # Center
-cube 1 0.0 0.0 0.05 0.05 0.05 5.0
-
-# Corners
-cylinder 1 -10.0 10.0 0.0 0.0 0.0 1.0 6.0 0.1
-cylinder 1 -10.0 -10.0 0.0 0.0 0.0 1.0 6.0 0.1
-cylinder 1 10.0 -10.0 0.0 0.0 0.0 1.0 6.0 0.1
-cylinder 1 10.0 10.0 0.0 0.0 0.0 1.0 6.0 0.1
+cube 1 0.0 0.0 0.5 1.0 1.0 1.0
 
 
-cylinder 1 -10.0 -10.0 1.0 1.0 0.0 0.0 20.0 0.05
-cylinder 1 -10.0 -10.0 1.0 0.0 1.0 0.0 20.0 0.05
-cylinder 1 10.0 10.0 1.0 -1.0 0.0 0.0 20.0 0.05
-cylinder 1 10.0 10.0 1.0 0.0 -1.0 0.0 20.0 0.05
-
-cylinder 1 -10.0 -10.0 3.0 1.0 0.0 0.0 20.0 0.05
-cylinder 1 -10.0 -10.0 3.0 0.0 1.0 0.0 20.0 0.05
-cylinder 1 10.0 10.0 3.0 -1.0 0.0 0.0 20.0 0.05
-cylinder 1 10.0 10.0 3.0 0.0 -1.0 0.0 20.0 0.05
-
-cylinder 1 -10.0 -10.0 5.0 1.0 0.0 0.0 20.0 0.05
-cylinder 1 -10.0 -10.0 5.0 0.0 1.0 0.0 20.0 0.05
-cylinder 1 10.0 10.0 5.0 -1.0 0.0 0.0 20.0 0.05
-cylinder 1 10.0 10.0 5.0 0.0 -1.0 0.0 20.0 0.05
+# Fence
+cylinder 1 -6.0 -6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 -6.0 -4.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 -6.0 -2.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 -6.0 0.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 -6.0 2.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 -6.0 4.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 -6.0 6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 6.0 -6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 6.0 -4.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 6.0 -2.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 6.0 0.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 6.0 2.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 6.0 4.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 6.0 6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 -6.0 -6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 -6.0 6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 -4.0 -6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 -4.0 6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 -2.0 -6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 -2.0 6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 0.0 -6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 0.0 6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 2.0 -6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 2.0 6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 4.0 -6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 4.0 6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 6.0 -6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 6.0 6.0 0.0 0.0 0.0 0.1 2.2 0.05
+cylinder 1 -6.0 6.0 0.2 0.0 1.0 0.0 12.0 0.05
+cylinder 1 -6.0 6.0 0.2 1.0 0.0 0.0 12.0 0.05

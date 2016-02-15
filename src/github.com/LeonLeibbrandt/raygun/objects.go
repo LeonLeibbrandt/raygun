@@ -187,20 +187,20 @@ func (c *Cube) Intersect(r *Ray, i int) bool {
 	return false
 }
 
-func (c *Cube) getNormal(p *Vector) *Vector {
+func (c *Cube) getNormal(point *Vector) *Vector {
 
 	switch {
-	case p.x < c.min.x+EPS:
+	case point.x < c.min.x+EPS:
 		return &Vector{-1, 0, 0}
-	case p.x > c.max.x-EPS:
+	case point.x > c.max.x-EPS:
 		return &Vector{1, 0, 0}
-	case p.y < c.min.y+EPS:
+	case point.y < c.min.y+EPS:
 		return &Vector{0, -1, 0}
-	case p.y > c.max.y-EPS:
+	case point.y > c.max.y-EPS:
 		return &Vector{0, 1, 0}
-	case p.z < c.min.z+EPS:
+	case point.z < c.min.z+EPS:
 		return &Vector{0, 0, -1}
-	case p.z > c.max.z-EPS:
+	case point.z > c.max.z-EPS:
 		return &Vector{0, 0, 1}
 	}
 	return &Vector{0, 1, 0}
@@ -289,7 +289,7 @@ func (y *Cylinder) Intersect(r *Ray, i int) bool {
 	if t0 < 0.0 {
 		t = t1
 	} else {
-		t = t0
+		t = math.Min(t0, t1)
 	}
 
 	if t > r.interDist {
@@ -298,12 +298,12 @@ func (y *Cylinder) Intersect(r *Ray, i int) bool {
 
 	t_k := t*m + n
 	if t_k < 0.0 {
-		// On start cap
+		// Could be on start cap
 		return false // y.intersectCap(r, i, true)
 	}
 
 	if t_k > 1.0 {
-		// On end cap
+		// Could be on end cap
 		return false // y.intersectCap(r, i, false)
 	}
 
