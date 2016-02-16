@@ -32,6 +32,21 @@ func NewGroup(name string, x, y, z float64, always bool, objects []Object) *Grou
 	return s
 }
 
+func (g *Group) CalcBounds() {
+	if g.Always {
+		return
+	}
+	max := 0.0
+	for _, obj := range g.ObjectList {
+		max = math.Max(max, obj.Furthest(g.Center))
+	}
+	if max == 0.0 {
+		g.Always = true
+		return
+	}
+	g.Sphere = NewSphere(g.Center.x, g.Center.y, g.Center.z, max, 0)
+}
+
 func (g *Group) HitBounds(r *Ray) bool {
 	if g.Always {
 		return true
@@ -40,6 +55,7 @@ func (g *Group) HitBounds(r *Ray) bool {
 }
 
 func (g *Group) Write(buffer *bufio.Writer) {
+	buffer.WriteString(fmt.Sprintf("%v %v\n", g.Name, g.Always))
 }
 
 // Object
@@ -49,6 +65,7 @@ type Object interface {
 	SetMaterial(int)
 	Intersect(r *Ray, g, i int) bool
 	getNormal(point *Vector) *Vector
+	Furthest(point *Vector) float64
 	Write(*bufio.Writer)
 }
 
@@ -142,6 +159,10 @@ func (e *Sphere) getNormal(point *Vector) *Vector {
 	return normal.Normalize()
 }
 
+func (e *Sphere) Furthest(point *Vector) float64 {
+	return e.Position.Sub(point).Module() + e.Radius
+}
+
 func (e *Sphere) String() string {
 	return fmt.Sprintf("<Esf: %d %s %.2f>", e.Material, e.Position.String(), e.Radius)
 }
@@ -214,6 +235,10 @@ func (p *Plane) Intersect(r *Ray, g, i int) bool {
 
 func (p *Plane) getNormal(point *Vector) *Vector {
 	return p.Normal
+}
+
+func (p *Plane) Furthest(point *Vector) float64 {
+	return p.Position.Sub(point).Module() + p.Radius + p.Width/2.0
 }
 
 func (p *Plane) String() string {
@@ -308,6 +333,11 @@ func (c *Cube) initMinMax() {
 		c.Position.y + c.Height/2.0,
 		c.Position.z + c.Depth,
 	}
+}
+
+func (c *Cube) Furthest(point *Vector) float64 {
+	max := math.Max(math.Max(c.Width/2.0, c.Height/2.), c.Depth)
+	return c.Position.Sub(point).Module() + max
 }
 
 func (c *Cube) Write(buffer *bufio.Writer) {
@@ -439,6 +469,10 @@ func (y *Cylinder) getNormal(point *Vector) *Vector {
 	pqa := PQ.Dot(y.Direction)
 	PQAA := y.Direction.Mul(pqa)
 	return PQ.Sub(PQAA).Normalize()
+}
+
+func (y *Cylinder) Furthest(point *Vector) float64 {
+	return y.Position.Sub(point).Module() + y.Length + y.Radius
 }
 
 func (y *Cylinder) Write(buffer *bufio.Writer) {

@@ -67,17 +67,17 @@ func (rg *RayGun) Render() {
 
 func (rg *RayGun) calcShadow(r *Ray, collisionObj, collisionGrp int) float64 {
 	shadow := 1.0 //starts with no shadow
-	for g, grp := range rg.Scene.GroupList {
-		for i, obj := range grp.ObjectList {
-			r.interObj = -1
-			r.interGrp = -1
-			r.interDist = MAX_DIST
-
-			if obj.Intersect(r, g, i) && g != collisionGrp && i != collisionObj {
-				shadow *= rg.Scene.MaterialList[obj.Material()].transmitCol
-			}
-		}
-	}
+	// for g, grp := range rg.Scene.GroupList {
+	//	for i, obj := range grp.ObjectList {
+	//		r.interObj = -1
+	//		r.interGrp = -1
+	//		r.interDist = MAX_DIST
+	//
+	//			if obj.Intersect(r, g, i) && g != collisionGrp && i != collisionObj {
+	//				shadow *= rg.Scene.MaterialList[obj.Material()].transmitCol
+	//			}
+	//		}
+	//	}
 	return shadow
 }
 
@@ -201,8 +201,5 @@ func (rg *RayGun) renderPixel(line chan int, done chan bool) {
 func (rg *RayGun) Write(buffer *bufio.Writer) {
 	for _, group := range rg.Scene.GroupList {
 		group.Write(buffer)
-		for _, object := range group.ObjectList {
-			object.Write(buffer)
-		}
 	}
 }

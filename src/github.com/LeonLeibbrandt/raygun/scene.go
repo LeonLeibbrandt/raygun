@@ -113,7 +113,11 @@ func NewScene(sceneFilename string) *Scene {
 
 		case "group":
 			pos := ParseVector(data[1:4])
-			scn.GroupList = append(scn.GroupList, NewGroup(data[0], pos.x, pos.y, pos.z, true, []Object{}))
+			always := true
+			if data[4] == "false" {
+				always = false
+			}
+			scn.GroupList = append(scn.GroupList, NewGroup(data[0], pos.x, pos.y, pos.z, always, []Object{}))
 			groupIndex = groupIndex + 1
 
 		case "sphere":
@@ -191,6 +195,10 @@ func NewScene(sceneFilename string) *Scene {
 	Vp.z = Vp.z*fl - 0.5*(float64(scn.gridWidth)*scn.Vhor.z+float64(scn.gridHeight)*scn.Vver.z)
 
 	scn.Vp = Vp
+
+	for _, grp := range scn.GroupList {
+		grp.CalcBounds()
+	}
 	return scn
 }
 
