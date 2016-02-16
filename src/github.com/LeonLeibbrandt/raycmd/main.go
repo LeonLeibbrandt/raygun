@@ -3,12 +3,15 @@ package main
 import (
 	"bufio"
 	"flag"
+	"fmt"
 	"github.com/LeonLeibbrandt/raygun"
 	"os"
 	"runtime"
+	"time"
 )
 
 func main() {
+	start := time.Now()
 	var sceneFilename string
 	var numWorkers int
 	flag.StringVar(&sceneFilename, "file", "samples/scene.txt", "Scene file to render.")
@@ -20,7 +23,7 @@ func main() {
 		panic(err)
 	}
 
-	// rg.Render()
+	rg.Render()
 
 	f, err := os.OpenFile(sceneFilename+".go", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
 	if err != nil {
@@ -32,4 +35,6 @@ func main() {
 	rg.Write(buffer)
 	buffer.WriteString("}\n")
 	buffer.Flush()
+	taken := time.Since(start)
+	fmt.Printf("Time taken : %s for %v objects\n", taken, rg.Scene.ObjectCount())
 }

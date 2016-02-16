@@ -10,39 +10,101 @@ const EPS = 1e-9
 
 // http://www.hugi.scene.org/online/coding/hugi%2024%20-%20coding%20graphics%20chris%20dragan%20raytracing%20shapes.htm
 
+type ObjectGroup interface {
+	HitBounds(r *Ray) bool
+}
+
+type Group struct {
+	Name       string
+	Center     *Vector
+	ObjectList []Object
+	Always     bool
+	Sphere     *Sphere
+}
+
+func NewGroup(name string, x, y, z float64, always bool, objects []Object) *Group {
+	s := &Group{
+		Name:       name,
+		Center:     &Vector{x, y, z},
+		Always:     always,
+		ObjectList: objects,
+	}
+	return s
+}
+
+func (g *Group) HitBounds(r *Ray) bool {
+	if g.Always {
+		return true
+	}
+	return g.Sphere.HitBounds(r)
+}
+
+func (g *Group) Write(buffer *bufio.Writer) {
+}
+
 // Object
 type Object interface {
 	Type() string
-	MaterialIndex() int
-	Intersect(r *Ray, i int) bool
+	Material() int
+	SetMaterial(int)
+	Intersect(r *Ray, g, i int) bool
 	getNormal(point *Vector) *Vector
 	Write(*bufio.Writer)
 }
 
+type Base struct {
+	objecttype string
+	material   int
+}
+
+func (b *Base) Type() string {
+	return b.objecttype
+}
+
+func (b *Base) Material() int {
+	return b.material
+}
+
+func (b *Base) SetMaterial(i int) {
+	b.material = i
+}
+
 // Sphere
 type Sphere struct {
-	Material int
+	Base
 	Position *Vector
 	Radius   float64
 }
 
 func NewSphere(x, y, z, r float64, m int) *Sphere {
 	return &Sphere{
-		Material: m,
+		Base: Base{
+			objecttype: "sphere",
+			material:   m,
+		},
 		Position: &Vector{x, y, z},
 		Radius:   r,
 	}
 }
 
-func (e *Sphere) Type() string {
-	return "sphere"
+func (e *Sphere) HitBounds(r *Ray) bool {
+	a := r.direction.Dot(r.direction)
+	X := r.origin.Sub(e.Position)
+	b := 2 * (r.direction.Dot(X))
+	c := X.Dot(X) - e.Radius*e.Radius
+	if b*b < 4*a*c {
+		return false
+	}
+	disc := math.Sqrt(b*b - 4*a*c)
+	t0 := (-b + disc) / 2 * a
+	t1 := (-b - disc) / 2 * a
+	if t0 < 0.0 && t1 < 0.0 {
+		return false
+	}
+	return true
 }
 
-func (e *Sphere) MaterialIndex() int {
-	return e.Material
-}
-
-func (e *Sphere) Intersect(r *Ray, i int) bool {
+func (e *Sphere) Intersect(r *Ray, g, i int) bool {
 	a := r.direction.Dot(r.direction)
 	X := r.origin.Sub(e.Position)
 	b := 2 * (r.direction.Dot(X))
@@ -71,6 +133,7 @@ func (e *Sphere) Intersect(r *Ray, i int) bool {
 
 	r.interDist = d
 	r.interObj = i
+	r.interGrp = g
 	return true
 }
 
@@ -89,35 +152,32 @@ func (e *Sphere) Write(buffer *bufio.Writer) {
 		e.Position.y,
 		e.Position.z,
 		e.Radius,
-		e.Material))
+		e.Material()))
 }
 
 // PLANE
 type Plane struct {
-	Material int
+	Base
 	Position *Vector
 	Normal   *Vector
-	distance float64
+	Radius   float64
+	Width    float64
 }
 
-func NewPlane(xp, yp, zp, xn, yn, zn, d float64, m int) *Plane {
+func NewPlane(xp, yp, zp, xn, yn, zn, r, w float64, m int) *Plane {
 	return &Plane{
-		Material: m,
+		Base: Base{
+			objecttype: "plane",
+			material:   m,
+		},
 		Position: &Vector{xp, yp, zp},
 		Normal:   (&Vector{xn, yn, zn}).Normalize(),
-		distance: d,
+		Radius:   r,
+		Width:    w,
 	}
 }
 
-func (p *Plane) Type() string {
-	return "plane"
-}
-
-func (p *Plane) MaterialIndex() int {
-	return p.Material
-}
-
-func (p *Plane) Intersect(r *Ray, i int) bool {
+func (p *Plane) Intersect(r *Ray, g, i int) bool {
 	v := p.Normal.Dot(r.direction)
 	if v == 0 {
 		return false
@@ -126,17 +186,28 @@ func (p *Plane) Intersect(r *Ray, i int) bool {
 	if t < 0.0 || t > r.interDist {
 		return false
 	}
-	if p.distance > 0.0 {
+	if p.Radius > 0.0 {
 		// We have a disc
 		interPoint := r.origin.Add(r.direction.Mul(t))
 		dist := interPoint.Sub(p.Position).Module()
-		if dist > p.distance {
+		if dist > p.Radius {
+			return false
+		}
+	}
+
+	if p.Width > 0.0 {
+		// We have a finite plane
+		interPoint := r.origin.Add(r.direction.Mul(t))
+		halfWidth := p.Width / 2.0
+		if interPoint.x < p.Position.x-halfWidth || interPoint.x > p.Position.x+halfWidth ||
+			interPoint.y < p.Position.y-halfWidth || interPoint.y > p.Position.y+halfWidth {
 			return false
 		}
 	}
 
 	r.interDist = t
 	r.interObj = i
+	r.interGrp = g
 	return true
 
 }
@@ -146,25 +217,26 @@ func (p *Plane) getNormal(point *Vector) *Vector {
 }
 
 func (p *Plane) String() string {
-	return fmt.Sprintf("<Pla: %d %s %.2f>", p.Material, p.Normal.String(), p.distance)
+	return fmt.Sprintf("<Pla: %d %s %.2f>", p.Material, p.Normal.String(), p.Radius)
 }
 
 func (p *Plane) Write(buffer *bufio.Writer) {
-	buffer.WriteString(fmt.Sprintf("raygun.NewPlane(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
+	buffer.WriteString(fmt.Sprintf("raygun.NewPlane(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
 		p.Position.x,
 		p.Position.y,
 		p.Position.z,
 		p.Normal.x,
 		p.Normal.y,
 		p.Normal.z,
-		p.distance,
-		p.Material))
+		p.Radius,
+		p.Width,
+		p.Material()))
 }
 
 // Cube
 
 type Cube struct {
-	Material int
+	Base
 	Position *Vector
 	Width    float64
 	Height   float64
@@ -175,7 +247,10 @@ type Cube struct {
 
 func NewCube(x, y, z, w, h, d float64, m int) *Cube {
 	c := &Cube{
-		Material: m,
+		Base: Base{
+			objecttype: "cube",
+			material:   m,
+		},
 		Position: &Vector{x, y, z},
 		Width:    w, // x direction
 		Height:   h, // y direction
@@ -185,15 +260,7 @@ func NewCube(x, y, z, w, h, d float64, m int) *Cube {
 	return c
 }
 
-func (c *Cube) Type() string {
-	return "cube"
-}
-
-func (c *Cube) MaterialIndex() int {
-	return c.Material
-}
-
-func (c *Cube) Intersect(r *Ray, i int) bool {
+func (c *Cube) Intersect(r *Ray, g, i int) bool {
 	n := c.min.Sub(r.origin).Div(r.direction)
 	f := c.max.Sub(r.origin).Div(r.direction)
 	n, f = n.Min(f), n.Max(f)
@@ -205,6 +272,7 @@ func (c *Cube) Intersect(r *Ray, i int) bool {
 		}
 		r.interDist = t0
 		r.interObj = i
+		r.interGrp = g
 		return true
 	}
 	return false
@@ -250,12 +318,12 @@ func (c *Cube) Write(buffer *bufio.Writer) {
 		c.Width,
 		c.Height,
 		c.Depth,
-		c.Material,
+		c.Material(),
 	))
 }
 
 type Cylinder struct {
-	Material  int
+	Base
 	Position  *Vector
 	Direction *Vector
 	Length    float64
@@ -264,7 +332,10 @@ type Cylinder struct {
 
 func NewCylinder(xp, yp, zp, xd, yd, zd, l, r float64, m int) *Cylinder {
 	return &Cylinder{
-		Material:  m,
+		Base: Base{
+			objecttype: "cylinder",
+			material:   m,
+		},
 		Position:  &Vector{xp, yp, zp},
 		Direction: (&Vector{xd, yd, zd}).Normalize(),
 		Length:    l,
@@ -272,16 +343,8 @@ func NewCylinder(xp, yp, zp, xd, yd, zd, l, r float64, m int) *Cylinder {
 	}
 }
 
-func (y *Cylinder) Type() string {
-	return "cylinder"
-}
-
-func (y *Cylinder) MaterialIndex() int {
-	return y.Material
-}
-
 // http://blog.makingartstudios.com/?p=286
-func (y *Cylinder) Intersect(r *Ray, i int) bool {
+func (y *Cylinder) Intersect(r *Ray, g, i int) bool {
 	cylend := y.Position.Add(y.Direction.Mul(y.Length))
 	AB := cylend.Sub(y.Position)
 	AO := r.origin.Sub(y.Position)
@@ -334,7 +397,7 @@ func (y *Cylinder) Intersect(r *Ray, i int) bool {
 	t_k := t*m + n
 	if t_k < 0.0 {
 		// Could be on start cap
-		if y.intersectCap(r, i, true) && t1 > r.interDist {
+		if y.intersectCap(r, true) && t1 > r.interDist {
 			t = t1
 		} else {
 			return false // y.intersectCap(r, i, true)
@@ -343,7 +406,7 @@ func (y *Cylinder) Intersect(r *Ray, i int) bool {
 
 	if t_k > 1.0 {
 		// Could be on end cap
-		if y.intersectCap(r, i, false) && t1 > r.interDist {
+		if y.intersectCap(r, false) && t1 > r.interDist {
 			t = t1
 		} else {
 			return false // y.intersectCap(r, i, true)
@@ -352,10 +415,11 @@ func (y *Cylinder) Intersect(r *Ray, i int) bool {
 
 	r.interDist = t
 	r.interObj = i
+	r.interGrp = g
 	return true
 
 }
-func (y *Cylinder) intersectCap(r *Ray, i int, start bool) bool {
+func (y *Cylinder) intersectCap(r *Ray, start bool) bool {
 	var pos *Vector
 	var dir *Vector
 	if start {
@@ -366,8 +430,8 @@ func (y *Cylinder) intersectCap(r *Ray, i int, start bool) bool {
 		dir = y.Direction
 	}
 
-	end := Plane{y.Material, pos, dir, y.Radius}
-	return end.Intersect(r, i)
+	end := Plane{Base{material: y.Material()}, pos, dir, y.Radius, 0.0}
+	return end.Intersect(r, 0, 0)
 }
 
 func (y *Cylinder) getNormal(point *Vector) *Vector {
@@ -387,6 +451,6 @@ func (y *Cylinder) Write(buffer *bufio.Writer) {
 		y.Direction.z,
 		y.Length,
 		y.Radius,
-		y.Material,
+		y.Material(),
 	))
 }

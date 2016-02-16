@@ -29,15 +29,17 @@ type Scene struct {
 	Vhor         *Vector
 	Vver         *Vector
 	Vp           *Vector
-	image        *image.RGBA
-	objectList   []Object
-	lightList    []Light
-	materialList []Material
+	Image        *image.RGBA
+	GroupList    []*Group
+	LightList    []Light
+	MaterialList []Material
 }
 
 func NewScene(sceneFilename string) *Scene {
 	scn := &Scene{}
 	// defaults
+	scn.GroupList = make([]*Group, 0)
+	groupIndex := -1
 	scn.imgWidth = 320
 	scn.imgHeight = 200
 
@@ -48,7 +50,7 @@ func NewScene(sceneFilename string) *Scene {
 	scn.startline = 0 // Start rendering line
 	scn.endline = scn.imgHeight - 1
 
-	//scn.objectList = append(scn.objectList, Sphere{0,0.0,0.0,0.0,0.0})
+	//scn.ObjectList = append(scn.ObjectList, Sphere{0,0.0,0.0,0.0,0.0})
 
 	f, err := os.Open(sceneFilename)
 	if err != nil {
@@ -109,19 +111,27 @@ func NewScene(sceneFilename string) *Scene {
 		case "cameraUp":
 			scn.cameraUp = ParseVector(data)
 
+		case "group":
+			pos := ParseVector(data[1:4])
+			scn.GroupList = append(scn.GroupList, NewGroup(data[0], pos.x, pos.y, pos.z, true, []Object{}))
+			groupIndex = groupIndex + 1
+
 		case "sphere":
 			mat, _ := strconv.Atoi(data[0])
 			pos := ParseVector(data[1:4])
 			rad, _ := strconv.ParseFloat(data[4], 64)
 
-			scn.objectList = append(scn.objectList, NewSphere(pos.x, pos.y, pos.z, rad, mat))
+			scn.GroupList[groupIndex].ObjectList = append(scn.GroupList[groupIndex].ObjectList,
+				NewSphere(pos.x, pos.y, pos.z, rad, mat))
 
 		case "plane":
 			mat, _ := strconv.Atoi(data[0])
-			dis, _ := strconv.ParseFloat(data[7], 64)
+			rad, _ := strconv.ParseFloat(data[7], 64)
+			wid, _ := strconv.ParseFloat(data[8], 64)
 			pos := ParseVector(data[1:4])
 			nor := ParseVector(data[4:7])
-			scn.objectList = append(scn.objectList, NewPlane(pos.x, pos.y, pos.z, nor.x, nor.y, nor.z, dis, mat))
+			scn.GroupList[groupIndex].ObjectList = append(scn.GroupList[groupIndex].ObjectList,
+				NewPlane(pos.x, pos.y, pos.z, nor.x, nor.y, nor.z, rad, wid, mat))
 
 		case "cube":
 			mat, _ := strconv.Atoi(data[0])
@@ -129,7 +139,8 @@ func NewScene(sceneFilename string) *Scene {
 			width, _ := strconv.ParseFloat(data[4], 64)
 			height, _ := strconv.ParseFloat(data[5], 64)
 			depth, _ := strconv.ParseFloat(data[6], 64)
-			scn.objectList = append(scn.objectList, NewCube(pos.x, pos.y, pos.z, width, height, depth, mat))
+			scn.GroupList[groupIndex].ObjectList = append(scn.GroupList[groupIndex].ObjectList,
+				NewCube(pos.x, pos.y, pos.z, width, height, depth, mat))
 
 		case "cylinder":
 			mat, _ := strconv.Atoi(data[0])
@@ -137,15 +148,16 @@ func NewScene(sceneFilename string) *Scene {
 			dir := ParseVector(data[4:7])
 			len, _ := strconv.ParseFloat(data[7], 64)
 			rad, _ := strconv.ParseFloat(data[8], 64)
-			scn.objectList = append(scn.objectList, NewCylinder(pos.x, pos.y, pos.z, dir.x, dir.y, dir.z, len, rad, mat))
+			scn.GroupList[groupIndex].ObjectList = append(scn.GroupList[groupIndex].ObjectList,
+				NewCylinder(pos.x, pos.y, pos.z, dir.x, dir.y, dir.z, len, rad, mat))
 
 		case "light":
 			light := Light{ParseVector(data[0:3]), ParseColor(data[3:6]), data[6]}
-			scn.lightList = append(scn.lightList, light)
+			scn.LightList = append(scn.LightList, light)
 
 		case "material":
 			mat := ParseMaterial(data)
-			scn.materialList = append(scn.materialList, mat)
+			scn.MaterialList = append(scn.MaterialList, mat)
 
 		}
 		line, isPrefix, err = r.ReadLine()
@@ -158,7 +170,7 @@ func NewScene(sceneFilename string) *Scene {
 		panic(err)
 	}
 
-	scn.image = image.NewRGBA(image.Rect(0, 0, scn.imgWidth, scn.imgHeight))
+	scn.Image = image.NewRGBA(image.Rect(0, 0, scn.imgWidth, scn.imgHeight))
 
 	scn.gridWidth = scn.imgWidth * scn.oversampling
 	scn.gridHeight = scn.imgHeight * scn.oversampling
@@ -180,6 +192,14 @@ func NewScene(sceneFilename string) *Scene {
 
 	scn.Vp = Vp
 	return scn
+}
+
+func (sc *Scene) ObjectCount() int {
+	count := 0
+	for _, grp := range sc.GroupList {
+		count = count + len(grp.ObjectList)
+	}
+	return count
 }
 
 // Auxiliary Methods
