@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"flag"
-	"runtime"
 	"github.com/LeonLeibbrandt/raygun"
+	"os"
+	"runtime"
 )
 
 func main() {
@@ -17,5 +19,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	rg.Render()
+
+	// rg.Render()
+
+	f, err := os.OpenFile(sceneFilename+".go", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	buffer := bufio.NewWriter(f)
+	buffer.WriteString("var mains = []raygun.Object{\n")
+	rg.Write(buffer)
+	buffer.WriteString("}\n")
+	buffer.Flush()
 }

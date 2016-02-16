@@ -1,6 +1,7 @@
 package raygun
 
 import (
+	"bufio"
 	"fmt"
 	"image/png"
 	"math"
@@ -187,4 +188,10 @@ func (rg *RayGun) renderPixel(line chan int, done chan bool) {
 		}
 	}
 	done <- true
+}
+
+func (rg *RayGun) Write(buffer *bufio.Writer) {
+	for _, object := range rg.Scene.objectList {
+		object.Write(buffer)
+	}
 }

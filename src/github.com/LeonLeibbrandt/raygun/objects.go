@@ -1,6 +1,7 @@
 package raygun
 
 import (
+	"bufio"
 	"fmt"
 	"math"
 )
@@ -15,6 +16,7 @@ type Object interface {
 	MaterialIndex() int
 	Intersect(r *Ray, i int) bool
 	getNormal(point *Vector) *Vector
+	Write(*bufio.Writer)
 }
 
 // Sphere
@@ -81,6 +83,15 @@ func (e *Sphere) String() string {
 	return fmt.Sprintf("<Esf: %d %s %.2f>", e.Material, e.Position.String(), e.Radius)
 }
 
+func (e *Sphere) Write(buffer *bufio.Writer) {
+	buffer.WriteString(fmt.Sprintf("raygun.NewSphere(%.2f, %.2f, %.2f, %.2f, %v),\n",
+		e.Position.x,
+		e.Position.y,
+		e.Position.z,
+		e.Radius,
+		e.Material))
+}
+
 // PLANE
 type Plane struct {
 	Material int
@@ -136,6 +147,18 @@ func (p *Plane) getNormal(point *Vector) *Vector {
 
 func (p *Plane) String() string {
 	return fmt.Sprintf("<Pla: %d %s %.2f>", p.Material, p.Normal.String(), p.distance)
+}
+
+func (p *Plane) Write(buffer *bufio.Writer) {
+	buffer.WriteString(fmt.Sprintf("raygun.NewPlane(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
+		p.Position.x,
+		p.Position.y,
+		p.Position.z,
+		p.Normal.x,
+		p.Normal.y,
+		p.Normal.z,
+		p.distance,
+		p.Material))
 }
 
 // Cube
@@ -217,6 +240,18 @@ func (c *Cube) initMinMax() {
 		c.Position.y + c.Height/2.0,
 		c.Position.z + c.Depth,
 	}
+}
+
+func (c *Cube) Write(buffer *bufio.Writer) {
+	buffer.WriteString(fmt.Sprintf("raygun.NewCube(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
+		c.Position.x,
+		c.Position.y,
+		c.Position.z,
+		c.Width,
+		c.Height,
+		c.Depth,
+		c.Material,
+	))
 }
 
 type Cylinder struct {
@@ -340,4 +375,18 @@ func (y *Cylinder) getNormal(point *Vector) *Vector {
 	pqa := PQ.Dot(y.Direction)
 	PQAA := y.Direction.Mul(pqa)
 	return PQ.Sub(PQAA).Normalize()
+}
+
+func (y *Cylinder) Write(buffer *bufio.Writer) {
+	buffer.WriteString(fmt.Sprintf("raygun.NewCylinder(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
+		y.Position.x,
+		y.Position.y,
+		y.Position.z,
+		y.Direction.x,
+		y.Direction.y,
+		y.Direction.z,
+		y.Length,
+		y.Radius,
+		y.Material,
+	))
 }
