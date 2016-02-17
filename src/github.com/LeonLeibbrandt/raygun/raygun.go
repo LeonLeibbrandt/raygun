@@ -1,9 +1,10 @@
 package raygun
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
 	"image/jpeg"
+	"io/ioutil"
 	"math"
 	"os"
 )
@@ -198,8 +199,14 @@ func (rg *RayGun) renderPixel(line chan int, done chan bool) {
 	done <- true
 }
 
-func (rg *RayGun) Write(buffer *bufio.Writer) {
-	for _, group := range rg.Scene.GroupList {
-		group.Write(buffer)
-	}
+func (rg *RayGun) Write() {
+	path := "/home/leon/Projects/siteview/src/github.com/IMQS/siteview/components/"
+	buffer := bytes.NewBufferString("")
+	buffer.WriteString("package components\n\n")
+	buffer.WriteString("import (\n\t\"github.com/IMQS/raygun\"\n)\n\n")
+	fmt.Fprintf(buffer, "%#v", rg.Scene)
+	ioutil.WriteFile(path+"scene.go", []byte(buffer.String()), os.ModePerm)
+	// for _, group := range rg.Scene.GroupList {
+	// 	group.Write(buffer)
+	// }
 }

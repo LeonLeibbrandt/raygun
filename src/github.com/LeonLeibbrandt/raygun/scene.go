@@ -3,6 +3,7 @@ package raygun
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"image"
 	"io"
 	"math"
@@ -227,6 +228,10 @@ func (sc *Scene) ObjectCount() int {
 		count = count + len(grp.ObjectList)
 	}
 	return count
+}
+
+func (sc *Scene) String() string {
+	return fmt.Sprintf("var scene = &raygun.Scene{}\n")
 }
 
 // Auxiliary Methods

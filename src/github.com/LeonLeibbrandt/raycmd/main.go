@@ -23,8 +23,8 @@ func main() {
 		panic(err)
 	}
 
-	rg.Render()
-
+	// rg.Render()
+	rg.Write()
 	// f, err := os.OpenFile(sceneFilename+".go", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
 	// if err != nil {
 	//	panic(err)
