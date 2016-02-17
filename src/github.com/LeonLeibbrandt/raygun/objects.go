@@ -28,12 +28,16 @@ func NewGroup(name string, x, y, z float64, always bool, objects []Object) *Grou
 		Center:     &Vector{x, y, z},
 		Always:     always,
 		ObjectList: objects,
+		Bounds:     nil,
 	}
 	return s
 }
 
 func (g *Group) CalcBounds() {
 	if g.Always {
+		return
+	}
+	if g.Bounds != nil {
 		return
 	}
 	max := 0.0
@@ -105,7 +109,7 @@ func NewSphere(x, y, z, r float64, m int) *Sphere {
 }
 
 func (e *Sphere) HitBounds(r *Ray) bool {
-	a := r.direction.Dot(r.direction)
+	a := r.a // r.direction.Dot(r.direction)
 	X := r.origin.Sub(e.Position)
 	b := 2 * (r.direction.Dot(X))
 	c := X.Dot(X) - e.Radius*e.Radius
@@ -123,7 +127,7 @@ func (e *Sphere) HitBounds(r *Ray) bool {
 }
 
 func (e *Sphere) Intersect(r *Ray, g, i int) bool {
-	a := r.direction.Dot(r.direction)
+	a := r.a // r.direction.Dot(r.direction)
 	X := r.origin.Sub(e.Position)
 	b := 2 * (r.direction.Dot(X))
 	c := X.Dot(X) - e.Radius*e.Radius
@@ -181,23 +185,63 @@ func (e *Sphere) Write(buffer *bufio.Writer) {
 // PLANE
 type Plane struct {
 	Base
-	Position *Vector
-	Normal   *Vector
-	Radius   float64
-	Width    float64
+	Position   *Vector
+	Normal     *Vector
+	Radius     float64
+	Width      float64 // Only two of these will be used for plane, the one in the "normal" direction MUST be 0.0
+	Height     float64
+	Depth      float64
+	halfWidth  float64
+	halfHeight float64
+	halfDepth  float64
 }
 
-func NewPlane(xp, yp, zp, xn, yn, zn, r, w float64, m int) *Plane {
-	return &Plane{
+func NewPlane(xp, yp, zp, xn, yn, zn, r, w, h, d float64, m int) *Plane {
+	p := &Plane{
 		Base: Base{
 			objecttype: "plane",
 			material:   m,
 		},
-		Position: &Vector{xp, yp, zp},
-		Normal:   (&Vector{xn, yn, zn}).Normalize(),
-		Radius:   r,
-		Width:    w,
+		Position:   &Vector{xp, yp, zp},
+		Normal:     (&Vector{xn, yn, zn}).Normalize(),
+		Radius:     r,
+		Width:      w,
+		Height:     h,
+		Depth:      d,
+		halfWidth:  w / 2.0,
+		halfHeight: h / 2.0,
+		halfDepth:  d / 2.0,
 	}
+	// fmt.Printf("%#v\n", p)
+	return p
+}
+
+var done = false
+
+func (p *Plane) HitBounds(r *Ray) bool {
+	v := p.Normal.Dot(r.direction)
+	if v == 0 {
+		return false
+	}
+	t := p.Normal.Dot(p.Position.Sub(r.origin)) / v
+	if t < 0.0 {
+		return false
+	}
+	// We have a finite plane
+	interPoint := r.origin.Add(r.direction.Mul(t))
+	if p.halfWidth > 0.0 && (interPoint.x < p.Position.x-p.halfWidth || interPoint.x > p.Position.x+p.halfWidth) {
+		return false
+	}
+
+	if p.halfHeight > 0.0 && (interPoint.y < p.Position.y-p.halfHeight || interPoint.y > p.Position.y+p.halfHeight) {
+		return false
+	}
+
+	if p.halfDepth > 0.0 && (interPoint.z < p.Position.z-p.halfDepth || interPoint.z > p.Position.z+p.halfDepth) {
+		return false
+	}
+
+	return true
 }
 
 func (p *Plane) Intersect(r *Ray, g, i int) bool {
@@ -221,9 +265,9 @@ func (p *Plane) Intersect(r *Ray, g, i int) bool {
 	if p.Width > 0.0 {
 		// We have a finite plane
 		interPoint := r.origin.Add(r.direction.Mul(t))
-		halfWidth := p.Width / 2.0
-		if interPoint.x < p.Position.x-halfWidth || interPoint.x > p.Position.x+halfWidth ||
-			interPoint.y < p.Position.y-halfWidth || interPoint.y > p.Position.y+halfWidth {
+		if interPoint.x < p.Position.x-p.halfWidth || interPoint.x > p.Position.x+p.halfWidth ||
+			interPoint.y < p.Position.y-p.halfHeight || interPoint.y > p.Position.y+p.halfHeight ||
+			interPoint.z < p.Position.z-p.halfDepth || interPoint.z > p.Position.z+p.halfDepth {
 			return false
 		}
 	}
@@ -360,10 +404,12 @@ type Cylinder struct {
 	Direction *Vector
 	Length    float64
 	Radius    float64
+	startDisc *Plane
+	endDisc   *Plane
 }
 
 func NewCylinder(xp, yp, zp, xd, yd, zd, l, r float64, m int) *Cylinder {
-	return &Cylinder{
+	c := &Cylinder{
 		Base: Base{
 			objecttype: "cylinder",
 			material:   m,
@@ -373,6 +419,14 @@ func NewCylinder(xp, yp, zp, xd, yd, zd, l, r float64, m int) *Cylinder {
 		Length:    l,
 		Radius:    r,
 	}
+	pos := c.Position
+	dir := c.Direction.Mul(-1)
+	c.startDisc = NewPlane(pos.x, pos.y, pos.z, dir.x, dir.y, dir.z, c.Radius, 0.0, 0.0, 0.0, c.Material())
+
+	pos = c.Position.Add(c.Direction.Mul(c.Length))
+	dir = c.Direction
+	c.endDisc = NewPlane(pos.x, pos.y, pos.z, dir.x, dir.y, dir.z, c.Radius, 0.0, 0.0, 0.0, c.Material())
+	return c
 }
 
 // http://blog.makingartstudios.com/?p=286
@@ -452,18 +506,10 @@ func (y *Cylinder) Intersect(r *Ray, g, i int) bool {
 
 }
 func (y *Cylinder) intersectCap(r *Ray, start bool) bool {
-	var pos *Vector
-	var dir *Vector
 	if start {
-		pos = y.Position
-		dir = y.Direction.Mul(-1)
-	} else {
-		pos = y.Position.Add(y.Direction.Mul(y.Length))
-		dir = y.Direction
+		return y.startDisc.Intersect(r, 0, 0)
 	}
-
-	end := Plane{Base{material: y.Material()}, pos, dir, y.Radius, 0.0}
-	return end.Intersect(r, 0, 0)
+	return y.endDisc.Intersect(r, 0, 0)
 }
 
 func (y *Cylinder) getNormal(point *Vector) *Vector {

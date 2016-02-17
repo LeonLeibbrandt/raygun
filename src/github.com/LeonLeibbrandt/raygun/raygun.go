@@ -135,8 +135,8 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 				if T > 0.0 {
 					vDirRef := (vNormal.Mul(2).Mul(T)).Sub(originBackV)
 					vOffsetInter := interPoint.Add(vDirRef.Mul(SMALL))
-					rayoRef := Ray{vOffsetInter, vDirRef, MAX_DIST, -1, -1}
-					c = c.Add(rg.trace(&rayoRef, depth+1.0).Mul(rg.Scene.MaterialList[matIndex].reflectionCol))
+					rayoRef := NewRay(vOffsetInter, vDirRef)
+					c = c.Add(rg.trace(rayoRef, depth+1.0).Mul(rg.Scene.MaterialList[matIndex].reflectionCol))
 				}
 			}
 			if rg.Scene.MaterialList[matIndex].transmitCol > 0.0 { // ---- Refraccion
@@ -156,8 +156,8 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 					par_sqrt := math.Sqrt(1 - (n1*n1/n2*n2)*(1-RN*RN))
 					refactDirV := incidentV.Add(vNormal.Mul(RN).Mul(n1 / n2)).Sub(vNormal.Mul(par_sqrt))
 					vOffsetInter := interPoint.Add(refactDirV.Mul(SMALL))
-					refractRay := Ray{vOffsetInter, refactDirV, MAX_DIST, -1, -1}
-					c = c.Add(rg.trace(&refractRay, depth+1.0).Mul(rg.Scene.MaterialList[matIndex].transmitCol))
+					refractRay := NewRay(vOffsetInter, refactDirV)
+					c = c.Add(rg.trace(refractRay, depth+1.0).Mul(rg.Scene.MaterialList[matIndex].transmitCol))
 				}
 			}
 		}
@@ -178,8 +178,8 @@ func (rg *RayGun) renderPixel(line chan int, done chan bool) {
 					dir.y = float64(xo)*rg.Scene.Vhor.y + float64(yo)*rg.Scene.Vver.y + rg.Scene.Vp.y
 					dir.z = float64(xo)*rg.Scene.Vhor.z + float64(yo)*rg.Scene.Vver.z + rg.Scene.Vp.z
 					dir = dir.Normalize()
-					r := Ray{rg.Scene.cameraPos, dir, MAX_DIST, -1, -1}
-					c = c.Add(rg.trace(&r, 1.0))
+					r := NewRay(rg.Scene.cameraPos, dir)
+					c = c.Add(rg.trace(r, 1.0))
 					yo += 1
 				}
 				xo += 1

@@ -117,7 +117,24 @@ func NewScene(sceneFilename string) *Scene {
 			if data[4] == "false" {
 				always = false
 			}
-			scn.GroupList = append(scn.GroupList, NewGroup(data[0], pos.x, pos.y, pos.z, always, []Object{}))
+			grp := NewGroup(data[0], pos.x, pos.y, pos.z, always, []Object{})
+			switch grp.Name {
+			case "fence1":
+				grp.Bounds = NewPlane(pos.x, pos.y, pos.z, 1.0, 0.0, 0.0, 0.0, 0.0, 12.2, 2.7, 0)
+			case "fence2":
+				grp.Bounds = NewPlane(pos.x, pos.y, pos.z, 1.0, 0.0, 0.0, 0.0, 0.0, 12.2, 2.7, 0)
+			case "fence3":
+				grp.Bounds = NewPlane(pos.x, pos.y, pos.z, 0.0, 1.0, 0.0, 0.0, 12.2, 0.0, 2.7, 0)
+			case "fence4":
+				grp.Bounds = NewPlane(pos.x, pos.y, pos.z, 0.0, 1.0, 0.0, 0.0, 8.2, 0.0, 2.8, 0)
+			case "fence5":
+				grp.Bounds = NewPlane(pos.x, pos.y, pos.z, 0.0, 1.0, 0.0, 0.0, 2.2, 0.0, 2.8, 0)
+			case "closedgate":
+				grp.Bounds = NewPlane(pos.x, pos.y, pos.z, 0.0, 1.0, 0.0, 0.0, 2.2, 0.0, 2.8, 0)
+			case "opengate":
+				grp.Bounds = NewPlane(pos.x, pos.y, pos.z, 1.0, 1.0, 0.0, 0.0, 2.2, 0.0, 4.5, 0)
+			}
+			scn.GroupList = append(scn.GroupList, grp)
 			groupIndex = groupIndex + 1
 
 		case "sphere":
@@ -130,12 +147,14 @@ func NewScene(sceneFilename string) *Scene {
 
 		case "plane":
 			mat, _ := strconv.Atoi(data[0])
-			rad, _ := strconv.ParseFloat(data[7], 64)
-			wid, _ := strconv.ParseFloat(data[8], 64)
 			pos := ParseVector(data[1:4])
 			nor := ParseVector(data[4:7])
+			rad, _ := strconv.ParseFloat(data[7], 64)
+			wid, _ := strconv.ParseFloat(data[8], 64)
+			hei, _ := strconv.ParseFloat(data[9], 64)
+			dep, _ := strconv.ParseFloat(data[10], 64)
 			scn.GroupList[groupIndex].ObjectList = append(scn.GroupList[groupIndex].ObjectList,
-				NewPlane(pos.x, pos.y, pos.z, nor.x, nor.y, nor.z, rad, wid, mat))
+				NewPlane(pos.x, pos.y, pos.z, nor.x, nor.y, nor.z, rad, wid, hei, dep, mat))
 
 		case "cube":
 			mat, _ := strconv.Atoi(data[0])
