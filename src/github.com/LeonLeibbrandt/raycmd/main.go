@@ -1,11 +1,11 @@
 package main
 
 import (
-	"bufio"
+	// "bufio"
 	"flag"
 	"fmt"
 	"github.com/LeonLeibbrandt/raygun"
-	"os"
+	// "os"
 	"runtime"
 	"time"
 )
@@ -25,16 +25,16 @@ func main() {
 
 	rg.Render()
 
-	f, err := os.OpenFile(sceneFilename+".go", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-	buffer := bufio.NewWriter(f)
-	buffer.WriteString("var mains = []raygun.Object{\n")
-	rg.Write(buffer)
-	buffer.WriteString("}\n")
-	buffer.Flush()
+	// f, err := os.OpenFile(sceneFilename+".go", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
+	// if err != nil {
+	//	panic(err)
+	// }
+	// defer f.Close()
+	// buffer := bufio.NewWriter(f)
+	// buffer.WriteString("var mains = []raygun.Object{\n")
+	// rg.Write(buffer)
+	// buffer.WriteString("}\n")
+	// buffer.Flush()
 	taken := time.Since(start)
 	fmt.Printf("Time taken : %s for %v objects\n", taken, rg.Scene.ObjectCount())
 }

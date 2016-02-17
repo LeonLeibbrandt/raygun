@@ -61,7 +61,7 @@ func (rg *RayGun) Render() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(" DONE!")
+	fmt.Println("DONE!")
 
 }
 
@@ -105,16 +105,16 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 			case "point":
 				lightDir := light.position.Sub(interPoint)
 				lightDir = lightDir.Normalize()
-				lightRay := Ray{interPoint, lightDir, MAX_DIST, -1, -1}
-				shadow := rg.calcShadow(&lightRay, r.interObj, r.interGrp)
+				// lightRay := Ray{interPoint, lightDir, MAX_DIST, -1, -1}
+				// shadow := rg.calcShadow(&lightRay, r.interObj, r.interGrp)
 				NL := vNormal.Dot(lightDir)
 
 				if NL > 0.0 {
 					if rg.Scene.MaterialList[matIndex].difuseCol > 0.0 { // ------- Difuso
 						difuseColor := light.color.Mul(rg.Scene.MaterialList[matIndex].difuseCol).Mul(NL)
-						difuseColor.r *= rg.Scene.MaterialList[matIndex].color.r * shadow
-						difuseColor.g *= rg.Scene.MaterialList[matIndex].color.g * shadow
-						difuseColor.b *= rg.Scene.MaterialList[matIndex].color.b * shadow
+						difuseColor.r *= rg.Scene.MaterialList[matIndex].color.r // * shadow
+						difuseColor.g *= rg.Scene.MaterialList[matIndex].color.g // * shadow
+						difuseColor.b *= rg.Scene.MaterialList[matIndex].color.b // * shadow
 						c = c.Add(difuseColor)
 					}
 					if rg.Scene.MaterialList[matIndex].specularCol > 0.0 { // ----- Especular
@@ -122,7 +122,7 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 						spec := originBackV.Dot(R)
 						if spec > 0.0 {
 							spec = rg.Scene.MaterialList[matIndex].specularCol * math.Pow(spec, rg.Scene.MaterialList[matIndex].specularD)
-							specularColor := light.color.Mul(spec).Mul(shadow)
+							specularColor := light.color.Mul(spec) // .Mul(shadow)
 							c = c.Add(specularColor)
 						}
 					}

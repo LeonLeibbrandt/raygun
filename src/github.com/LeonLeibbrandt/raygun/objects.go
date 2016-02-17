@@ -10,7 +10,7 @@ const EPS = 1e-9
 
 // http://www.hugi.scene.org/online/coding/hugi%2024%20-%20coding%20graphics%20chris%20dragan%20raytracing%20shapes.htm
 
-type ObjectGroup interface {
+type GroupBounds interface {
 	HitBounds(r *Ray) bool
 }
 
@@ -19,7 +19,7 @@ type Group struct {
 	Center     *Vector
 	ObjectList []Object
 	Always     bool
-	Sphere     *Sphere
+	Bounds     GroupBounds
 }
 
 func NewGroup(name string, x, y, z float64, always bool, objects []Object) *Group {
@@ -44,14 +44,14 @@ func (g *Group) CalcBounds() {
 		g.Always = true
 		return
 	}
-	g.Sphere = NewSphere(g.Center.x, g.Center.y, g.Center.z, max, 0)
+	g.Bounds = NewSphere(g.Center.x, g.Center.y, g.Center.z, max, 0)
 }
 
 func (g *Group) HitBounds(r *Ray) bool {
 	if g.Always {
 		return true
 	}
-	return g.Sphere.HitBounds(r)
+	return g.Bounds.HitBounds(r)
 }
 
 func (g *Group) Write(buffer *bufio.Writer) {
@@ -109,10 +109,11 @@ func (e *Sphere) HitBounds(r *Ray) bool {
 	X := r.origin.Sub(e.Position)
 	b := 2 * (r.direction.Dot(X))
 	c := X.Dot(X) - e.Radius*e.Radius
-	if b*b < 4*a*c {
+	d := b*b - 4*a*c
+	if d < 0.0 {
 		return false
 	}
-	disc := math.Sqrt(b*b - 4*a*c)
+	disc := math.Sqrt(d)
 	t0 := (-b + disc) / 2 * a
 	t1 := (-b - disc) / 2 * a
 	if t0 < 0.0 && t1 < 0.0 {
@@ -126,29 +127,30 @@ func (e *Sphere) Intersect(r *Ray, g, i int) bool {
 	X := r.origin.Sub(e.Position)
 	b := 2 * (r.direction.Dot(X))
 	c := X.Dot(X) - e.Radius*e.Radius
-	if b*b < 4*a*c {
+	d := b*b - 4*a*c
+	if d < 0.0 {
 		return false
 	}
-	disc := math.Sqrt(b*b - 4*a*c)
+	disc := math.Sqrt(d)
 	t0 := (-b + disc) / 2 * a
 	t1 := (-b - disc) / 2 * a
 	if t0 < 0.0 && t1 < 0.0 {
 		return false
 	}
-	var d float64
+	var t float64
 	switch {
 	case t0 < 0:
-		d = t1
+		t = t1
 	case t1 < 0:
-		d = t0
+		t = t0
 	default:
-		d = math.Min(t0, t1)
+		t = math.Min(t0, t1)
 	}
-	if d > r.interDist {
+	if t > r.interDist {
 		return false
 	}
 
-	r.interDist = d
+	r.interDist = t
 	r.interObj = i
 	r.interGrp = g
 	return true
