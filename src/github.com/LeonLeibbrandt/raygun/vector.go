@@ -58,5 +58,5 @@ func (v *Vector) Max(u *Vector) *Vector {
 }
 
 func (v *Vector) String() string {
-	return fmt.Sprintf("<Vec: %.2f %.2f %.2f>", v.x, v.y, v.z)
+	return fmt.Sprintf("&Vector{ %.2f, %.2f, %.2f},", v.x, v.y, v.z)
 }
