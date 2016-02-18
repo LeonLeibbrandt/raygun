@@ -1,62 +1,61 @@
 package raygun
 
 import (
-	"fmt"
 	"math"
 )
 
 type Vector struct {
-	x, y, z float64
+	X, Y, Z float64
 }
 
 // v.Dot(u) -> float64
 func (v *Vector) Dot(u *Vector) float64 {
-	return (v.x*u.x + v.y*u.y + v.z*u.z)
+	return (v.X*u.X + v.Y*u.Y + v.Z*u.Z)
 }
 
 func (v *Vector) Cross(u *Vector) (*Vector) {
 	r := &Vector{}
-	r.x = u.y*v.z - u.z*v.y
-	r.y = u.z*v.z - u.x*v.z
-	r.z = u.x*v.y - u.y*v.x
+	r.X = u.Y*v.Z - u.Z*v.Y
+	r.Y = u.Z*v.Z - u.X*v.Z
+	r.Z = u.X*v.Y - u.Y*v.X
 	return r
 }
 
 func (v *Vector) Module() float64 {
-	return math.Sqrt(v.x*v.x + v.y*v.y + v.z*v.z)
+	return math.Sqrt(v.X*v.X + v.Y*v.Y + v.Z*v.Z)
 }
 
 func (v *Vector) Normalize() *Vector {
 	if m := v.Module(); m != 0.0 {
-		return &Vector{v.x / m, v.y / m, v.z / m}
+		return &Vector{v.X / m, v.Y / m, v.Z / m}
 	}
 	return v
 }
 
 func (v *Vector) Add(u *Vector) *Vector {
-	return &Vector{v.x + u.x, v.y + u.y, v.z + u.z}
+	return &Vector{v.X + u.X, v.Y + u.Y, v.Z + u.Z}
 }
 
 func (v *Vector) Sub(u *Vector) *Vector {
-	return &Vector{v.x - u.x, v.y - u.y, v.z - u.z}
+	return &Vector{v.X - u.X, v.Y - u.Y, v.Z - u.Z}
 }
 
 func (v *Vector) Mul(u float64) *Vector {
-	return &Vector{v.x * u, v.y * u, v.z * u}
+	return &Vector{v.X * u, v.Y * u, v.Z * u}
 }
 
 func (v *Vector) Div(u *Vector) *Vector {
-	return &Vector{v.x / u.x, v.y / u.y, v.z / u.z}
+	return &Vector{v.X / u.X, v.Y / u.Y, v.Z / u.Z}
 }
 
 func (v *Vector) Min(u *Vector) *Vector {
-	return &Vector{math.Min(v.x, u.x), math.Min(v.y, u.y), math.Min(v.z, u.z)}
+	return &Vector{math.Min(v.X, u.X), math.Min(v.Y, u.Y), math.Min(v.Z, u.Z)}
 }
 
 func (v *Vector) Max(u *Vector) *Vector {
-	return &Vector{math.Max(v.x, u.x), math.Max(v.y, u.y), math.Max(v.z, u.z)}
+	return &Vector{math.Max(v.X, u.X), math.Max(v.Y, u.Y), math.Max(v.Z, u.Z)}
 }
 
-func (v *Vector) String() string {
-	return fmt.Sprintf("&Vector{ %.2f, %.2f, %.2f},", v.x, v.y, v.z)
-}
+// func (v *Vector) String() string {
+// 	return fmt.Sprintf("&Vector{ %.2f, %.2f, %.2f},", v.X, v.Y, v.Z)
+// }

@@ -14,12 +14,12 @@ type Group struct {
 	Bounds     GroupBounds
 }
 
-func NewGroup(name string, x, y, z float64, always bool, objects []Object) *Group {
+func NewGroup(name string, x, y, z float64, always bool) *Group {
 	s := &Group{
 		Name:       name,
 		Center:     &Vector{x, y, z},
 		Always:     always,
-		ObjectList: objects,
+//		ObjectList: ,
 		Bounds:     nil,
 	}
 	return s
@@ -40,11 +40,14 @@ func (g *Group) CalcBounds() {
 		g.Always = true
 		return
 	}
-	g.Bounds = NewSphere(g.Center.x, g.Center.y, g.Center.z, max, 0)
+	g.Bounds = NewSphere(g.Center.X, g.Center.Y, g.Center.Z, max, 0)
 }
 
 func (g *Group) HitBounds(r *Ray) bool {
 	if g.Always {
+		return true
+	}
+	if g.Bounds == nil {
 		return true
 	}
 	return g.Bounds.HitBounds(r)

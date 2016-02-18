@@ -14,19 +14,19 @@ import (
 
 // SCENE
 type Scene struct {
-	imgWidth     int
-	imgHeight    int
-	traceDepth   int
-	oversampling int
-	visionField  float64
-	startline    int
-	endline      int
-	gridWidth    int
-	gridHeight   int
-	cameraPos    *Vector
-	cameraLook   *Vector
-	cameraUp     *Vector
-	look         *Vector
+	ImgWidth     int
+	ImgHeight    int
+	TraceDepth   int
+	OverSampling int
+	VisionField  float64
+	StartLine    int
+	EndLine      int
+	GridWidth    int
+	GridHeight   int
+	CameraPos    *Vector
+	CameraLook   *Vector
+	CameraUp     *Vector
+	Look         *Vector
 	Vhor         *Vector
 	Vver         *Vector
 	Vp           *Vector
@@ -41,15 +41,15 @@ func NewScene(sceneFilename string) *Scene {
 	// defaults
 	scn.GroupList = make([]*Group, 0)
 	groupIndex := -1
-	scn.imgWidth = 320
-	scn.imgHeight = 200
+	scn.ImgWidth = 320
+	scn.ImgHeight = 200
 
-	scn.traceDepth = 3   // bounces
-	scn.oversampling = 1 // no oversampling
-	scn.visionField = 60
+	scn.TraceDepth = 3   // bounces
+	scn.OverSampling = 1 // no OverSampling
+	scn.VisionField = 60
 
-	scn.startline = 0 // Start rendering line
-	scn.endline = scn.imgHeight - 1
+	scn.StartLine = 0 // Start rendering line
+	scn.EndLine = scn.ImgHeight - 1
 
 	//scn.ObjectList = append(scn.ObjectList, Sphere{0,0.0,0.0,0.0,0.0})
 
@@ -64,6 +64,17 @@ func NewScene(sceneFilename string) *Scene {
 		panic(err)
 	}
 	line, isPrefix, err := r.ReadLine()
+
+	newplane := func(data []string) *Plane {
+		mat, _ := strconv.Atoi(data[0])
+		pos := ParseVector(data[1:4])
+		nor := ParseVector(data[4:7])
+		rad, _ := strconv.ParseFloat(data[7], 64)
+		wid, _ := strconv.ParseFloat(data[8], 64)
+		hei, _ := strconv.ParseFloat(data[9], 64)
+		dep, _ := strconv.ParseFloat(data[10], 64)
+		return NewPlane(pos.X, pos.Y, pos.Z, nor.X, nor.Y, nor.Z, rad, wid, hei, dep, mat)
+	}
 
 	for err == nil && !isPrefix {
 
@@ -92,49 +103,39 @@ func NewScene(sceneFilename string) *Scene {
 
 		switch word {
 		case "size":
-			scn.imgWidth, _ = strconv.Atoi(data[0])
-			scn.imgHeight, _ = strconv.Atoi(data[1])
-			scn.endline = scn.imgHeight - 1 // End rendering line
+			scn.ImgWidth, _ = strconv.Atoi(data[0])
+			scn.ImgHeight, _ = strconv.Atoi(data[1])
+			scn.EndLine = scn.ImgHeight - 1 // End rendering line
 		case "nbounces":
-			scn.traceDepth, _ = strconv.Atoi(data[0]) // n. bounces
-		case "oversampling":
-			scn.oversampling, _ = strconv.Atoi(data[0])
+			scn.TraceDepth, _ = strconv.Atoi(data[0]) // n. bounces
+		case "OverSampling":
+			scn.OverSampling, _ = strconv.Atoi(data[0])
 		case "vision":
-			scn.visionField, _ = strconv.ParseFloat(data[0], 64)
+			scn.VisionField, _ = strconv.ParseFloat(data[0], 64)
 		case "renderslice":
-			scn.startline, _ = strconv.Atoi(data[0])
-			scn.endline, _ = strconv.Atoi(data[1])
+			scn.StartLine, _ = strconv.Atoi(data[0])
+			scn.EndLine, _ = strconv.Atoi(data[1])
 
 		case "cameraPos":
-			scn.cameraPos = ParseVector(data)
+			scn.CameraPos = ParseVector(data)
 		case "cameraLook":
-			scn.cameraLook = ParseVector(data)
+			scn.CameraLook = ParseVector(data)
 		case "cameraUp":
-			scn.cameraUp = ParseVector(data)
+			scn.CameraUp = ParseVector(data)
 
 		case "group":
+			var plane GroupBounds
+			plane = nil
+			if len(data) == 16 {
+				plane = newplane(data[5:])
+			}
 			pos := ParseVector(data[1:4])
 			always := true
 			if data[4] == "false" {
 				always = false
 			}
-			grp := NewGroup(data[0], pos.x, pos.y, pos.z, always, []Object{})
-			switch grp.Name {
-			case "fence1":
-				grp.Bounds = NewPlane(pos.x, pos.y, pos.z, 1.0, 0.0, 0.0, 0.0, 0.0, 12.2, 2.7, 0)
-			case "fence2":
-				grp.Bounds = NewPlane(pos.x, pos.y, pos.z, 1.0, 0.0, 0.0, 0.0, 0.0, 12.2, 2.7, 0)
-			case "fence3":
-				grp.Bounds = NewPlane(pos.x, pos.y, pos.z, 0.0, 1.0, 0.0, 0.0, 12.2, 0.0, 2.7, 0)
-			case "fence4":
-				grp.Bounds = NewPlane(pos.x, pos.y, pos.z, 0.0, 1.0, 0.0, 0.0, 8.2, 0.0, 2.8, 0)
-			case "fence5":
-				grp.Bounds = NewPlane(pos.x, pos.y, pos.z, 0.0, 1.0, 0.0, 0.0, 2.2, 0.0, 2.8, 0)
-			case "closedgate":
-				grp.Bounds = NewPlane(pos.x, pos.y, pos.z, 0.0, 1.0, 0.0, 0.0, 2.2, 0.0, 2.8, 0)
-			case "opengate":
-				grp.Bounds = NewPlane(pos.x, pos.y, pos.z, 1.0, 1.0, 0.0, 0.0, 2.2, 0.0, 4.5, 0)
-			}
+			grp := NewGroup(data[0], pos.X, pos.Y, pos.Z, always)
+			grp.Bounds = plane
 			scn.GroupList = append(scn.GroupList, grp)
 			groupIndex = groupIndex + 1
 
@@ -144,18 +145,11 @@ func NewScene(sceneFilename string) *Scene {
 			rad, _ := strconv.ParseFloat(data[4], 64)
 
 			scn.GroupList[groupIndex].ObjectList = append(scn.GroupList[groupIndex].ObjectList,
-				NewSphere(pos.x, pos.y, pos.z, rad, mat))
+				NewSphere(pos.X, pos.Y, pos.Z, rad, mat))
 
 		case "plane":
-			mat, _ := strconv.Atoi(data[0])
-			pos := ParseVector(data[1:4])
-			nor := ParseVector(data[4:7])
-			rad, _ := strconv.ParseFloat(data[7], 64)
-			wid, _ := strconv.ParseFloat(data[8], 64)
-			hei, _ := strconv.ParseFloat(data[9], 64)
-			dep, _ := strconv.ParseFloat(data[10], 64)
 			scn.GroupList[groupIndex].ObjectList = append(scn.GroupList[groupIndex].ObjectList,
-				NewPlane(pos.x, pos.y, pos.z, nor.x, nor.y, nor.z, rad, wid, hei, dep, mat))
+				newplane(data))
 
 		case "cube":
 			mat, _ := strconv.Atoi(data[0])
@@ -164,7 +158,7 @@ func NewScene(sceneFilename string) *Scene {
 			height, _ := strconv.ParseFloat(data[5], 64)
 			depth, _ := strconv.ParseFloat(data[6], 64)
 			scn.GroupList[groupIndex].ObjectList = append(scn.GroupList[groupIndex].ObjectList,
-				NewCube(pos.x, pos.y, pos.z, width, height, depth, mat))
+				NewCube(pos.X, pos.Y, pos.Z, width, height, depth, mat))
 
 		case "cylinder":
 			mat, _ := strconv.Atoi(data[0])
@@ -173,7 +167,7 @@ func NewScene(sceneFilename string) *Scene {
 			len, _ := strconv.ParseFloat(data[7], 64)
 			rad, _ := strconv.ParseFloat(data[8], 64)
 			scn.GroupList[groupIndex].ObjectList = append(scn.GroupList[groupIndex].ObjectList,
-				NewCylinder(pos.x, pos.y, pos.z, dir.x, dir.y, dir.z, len, rad, mat))
+				NewCylinder(pos.X, pos.Y, pos.Z, dir.X, dir.Y, dir.Z, len, rad, mat))
 
 		case "light":
 			light := Light{ParseVector(data[0:3]), ParseColor(data[3:6]), data[6]}
@@ -194,25 +188,25 @@ func NewScene(sceneFilename string) *Scene {
 		panic(err)
 	}
 
-	scn.Image = image.NewRGBA(image.Rect(0, 0, scn.imgWidth, scn.imgHeight))
+	scn.Image = image.NewRGBA(image.Rect(0, 0, scn.ImgWidth, scn.ImgHeight))
 
-	scn.gridWidth = scn.imgWidth * scn.oversampling
-	scn.gridHeight = scn.imgHeight * scn.oversampling
+	scn.GridWidth = scn.ImgWidth * scn.OverSampling
+	scn.GridHeight = scn.ImgHeight * scn.OverSampling
 
-	scn.look = scn.cameraLook.Sub(scn.cameraPos)
-	scn.Vhor = scn.look.Cross(scn.cameraUp)
+	scn.Look = scn.CameraLook.Sub(scn.CameraPos)
+	scn.Vhor = scn.Look.Cross(scn.CameraUp)
 	scn.Vhor = scn.Vhor.Normalize()
 
-	scn.Vver = scn.look.Cross(scn.Vhor)
+	scn.Vver = scn.Look.Cross(scn.Vhor)
 	scn.Vver = scn.Vver.Normalize()
 
-	fl := float64(scn.gridWidth) / (2 * math.Tan((0.5*scn.visionField)*PI_180))
+	fl := float64(scn.GridWidth) / (2 * math.Tan((0.5*scn.VisionField)*PI_180))
 
-	Vp := scn.look.Normalize()
+	Vp := scn.Look.Normalize()
 
-	Vp.x = Vp.x*fl - 0.5*(float64(scn.gridWidth)*scn.Vhor.x+float64(scn.gridHeight)*scn.Vver.x)
-	Vp.y = Vp.y*fl - 0.5*(float64(scn.gridWidth)*scn.Vhor.y+float64(scn.gridHeight)*scn.Vver.y)
-	Vp.z = Vp.z*fl - 0.5*(float64(scn.gridWidth)*scn.Vhor.z+float64(scn.gridHeight)*scn.Vver.z)
+	Vp.X = Vp.X*fl - 0.5*(float64(scn.GridWidth)*scn.Vhor.X+float64(scn.GridHeight)*scn.Vver.X)
+	Vp.Y = Vp.Y*fl - 0.5*(float64(scn.GridWidth)*scn.Vhor.Y+float64(scn.GridHeight)*scn.Vver.Y)
+	Vp.Z = Vp.Z*fl - 0.5*(float64(scn.GridWidth)*scn.Vhor.Z+float64(scn.GridHeight)*scn.Vver.Z)
 
 	scn.Vp = Vp
 

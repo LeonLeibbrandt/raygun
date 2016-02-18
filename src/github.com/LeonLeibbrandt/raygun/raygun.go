@@ -2,7 +2,7 @@ package raygun
 
 import (
 	"bytes"
-	"fmt"
+	"github.com/bmatsuo/go-dfmt/fmt"
 	"image/jpeg"
 	"io/ioutil"
 	"math"
@@ -40,9 +40,9 @@ func (rg *RayGun) Render() {
 	}
 
 	fmt.Println("Rendering: ", rg.FileName)
-	fmt.Printf("Line (from %d to %d): ", rg.Scene.startline, rg.Scene.endline)
+	fmt.Printf("Line (from %d to %d): ", rg.Scene.StartLine, rg.Scene.EndLine)
 
-	for y := rg.Scene.startline; y < rg.Scene.endline; y++ {
+	for y := rg.Scene.StartLine; y < rg.Scene.EndLine; y++ {
 		rg.Line <- y
 	}
 	close(rg.Line)
@@ -75,7 +75,7 @@ func (rg *RayGun) calcShadow(r *Ray, collisionObj, collisionGrp int) float64 {
 	//		r.interDist = MAX_DIST
 	//
 	//			if obj.Intersect(r, g, i) && g != collisionGrp && i != collisionObj {
-	//				shadow *= rg.Scene.MaterialList[obj.Material()].transmitCol
+	//				shadow *= rg.Scene.MaterialList[obj.Material()].TransmitCol
 	//			}
 	//		}
 	//	}
@@ -100,47 +100,47 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 		originBackV = originBackV.Normalize()
 		vNormal := rg.Scene.GroupList[r.interGrp].ObjectList[r.interObj].getNormal(interPoint)
 		for _, light := range rg.Scene.LightList {
-			switch light.kind {
+			switch light.Kind {
 			case "ambient":
-				c = c.Add(light.color)
+				c = c.Add(light.Color)
 			case "point":
-				lightDir := light.position.Sub(interPoint)
+				lightDir := light.Position.Sub(interPoint)
 				lightDir = lightDir.Normalize()
 				// lightRay := Ray{interPoint, lightDir, MAX_DIST, -1, -1}
 				// shadow := rg.calcShadow(&lightRay, r.interObj, r.interGrp)
 				NL := vNormal.Dot(lightDir)
 
 				if NL > 0.0 {
-					if rg.Scene.MaterialList[matIndex].difuseCol > 0.0 { // ------- Difuso
-						difuseColor := light.color.Mul(rg.Scene.MaterialList[matIndex].difuseCol).Mul(NL)
-						difuseColor.r *= rg.Scene.MaterialList[matIndex].color.r // * shadow
-						difuseColor.g *= rg.Scene.MaterialList[matIndex].color.g // * shadow
-						difuseColor.b *= rg.Scene.MaterialList[matIndex].color.b // * shadow
+					if rg.Scene.MaterialList[matIndex].DifuseCol > 0.0 { // ------- Difuso
+						difuseColor := light.Color.Mul(rg.Scene.MaterialList[matIndex].DifuseCol).Mul(NL)
+						difuseColor.R *= rg.Scene.MaterialList[matIndex].Color.R // * shadow
+						difuseColor.G *= rg.Scene.MaterialList[matIndex].Color.G // * shadow
+						difuseColor.B *= rg.Scene.MaterialList[matIndex].Color.B // * shadow
 						c = c.Add(difuseColor)
 					}
-					if rg.Scene.MaterialList[matIndex].specularCol > 0.0 { // ----- Especular
+					if rg.Scene.MaterialList[matIndex].SpecularCol > 0.0 { // ----- Especular
 						R := (vNormal.Mul(2).Mul(NL)).Sub(lightDir)
 						spec := originBackV.Dot(R)
 						if spec > 0.0 {
-							spec = rg.Scene.MaterialList[matIndex].specularCol * math.Pow(spec, rg.Scene.MaterialList[matIndex].specularD)
-							specularColor := light.color.Mul(spec) // .Mul(shadow)
+							spec = rg.Scene.MaterialList[matIndex].SpecularCol * math.Pow(spec, rg.Scene.MaterialList[matIndex].SpecularD)
+							specularColor := light.Color.Mul(spec) // .Mul(shadow)
 							c = c.Add(specularColor)
 						}
 					}
 				}
 			}
 		}
-		if depth < rg.Scene.traceDepth {
-			if rg.Scene.MaterialList[matIndex].reflectionCol > 0.0 { // -------- Reflexion
+		if depth < rg.Scene.TraceDepth {
+			if rg.Scene.MaterialList[matIndex].ReflectionCol > 0.0 { // -------- Reflexion
 				T := originBackV.Dot(vNormal)
 				if T > 0.0 {
 					vDirRef := (vNormal.Mul(2).Mul(T)).Sub(originBackV)
 					vOffsetInter := interPoint.Add(vDirRef.Mul(SMALL))
 					rayoRef := NewRay(vOffsetInter, vDirRef)
-					c = c.Add(rg.trace(rayoRef, depth+1.0).Mul(rg.Scene.MaterialList[matIndex].reflectionCol))
+					c = c.Add(rg.trace(rayoRef, depth+1.0).Mul(rg.Scene.MaterialList[matIndex].ReflectionCol))
 				}
 			}
-			if rg.Scene.MaterialList[matIndex].transmitCol > 0.0 { // ---- Refraccion
+			if rg.Scene.MaterialList[matIndex].TransmitCol > 0.0 { // ---- Refraccion
 				RN := vNormal.Dot(incidentV.Mul(-1.0))
 				incidentV = incidentV.Normalize()
 				var n1, n2 float64
@@ -158,7 +158,7 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 					refactDirV := incidentV.Add(vNormal.Mul(RN).Mul(n1 / n2)).Sub(vNormal.Mul(par_sqrt))
 					vOffsetInter := interPoint.Add(refactDirV.Mul(SMALL))
 					refractRay := NewRay(vOffsetInter, refactDirV)
-					c = c.Add(rg.trace(refractRay, depth+1.0).Mul(rg.Scene.MaterialList[matIndex].transmitCol))
+					c = c.Add(rg.trace(refractRay, depth+1.0).Mul(rg.Scene.MaterialList[matIndex].TransmitCol))
 				}
 			}
 		}
@@ -168,27 +168,27 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 
 func (rg *RayGun) renderPixel(line chan int, done chan bool) {
 	for y := range line { // 1: 1, 5: 2, 8: 3,
-		for x := 0; x < rg.Scene.imgWidth; x++ {
+		for x := 0; x < rg.Scene.ImgWidth; x++ {
 			var c Color
-			yo := y * rg.Scene.oversampling
-			xo := x * rg.Scene.oversampling
-			for i := 0; i < rg.Scene.oversampling; i++ {
-				for j := 0; j < rg.Scene.oversampling; j++ {
+			yo := y * rg.Scene.OverSampling
+			xo := x * rg.Scene.OverSampling
+			for i := 0; i < rg.Scene.OverSampling; i++ {
+				for j := 0; j < rg.Scene.OverSampling; j++ {
 					dir := &Vector{}
-					dir.x = float64(xo)*rg.Scene.Vhor.x + float64(yo)*rg.Scene.Vver.x + rg.Scene.Vp.x
-					dir.y = float64(xo)*rg.Scene.Vhor.y + float64(yo)*rg.Scene.Vver.y + rg.Scene.Vp.y
-					dir.z = float64(xo)*rg.Scene.Vhor.z + float64(yo)*rg.Scene.Vver.z + rg.Scene.Vp.z
+					dir.X = float64(xo)*rg.Scene.Vhor.X + float64(yo)*rg.Scene.Vver.X + rg.Scene.Vp.X
+					dir.Y = float64(xo)*rg.Scene.Vhor.Y + float64(yo)*rg.Scene.Vver.Y + rg.Scene.Vp.Y
+					dir.Z = float64(xo)*rg.Scene.Vhor.Z + float64(yo)*rg.Scene.Vver.Z + rg.Scene.Vp.Z
 					dir = dir.Normalize()
-					r := NewRay(rg.Scene.cameraPos, dir)
+					r := NewRay(rg.Scene.CameraPos, dir)
 					c = c.Add(rg.trace(r, 1.0))
 					yo += 1
 				}
 				xo += 1
 			}
-			srq_oversampling := float64(rg.Scene.oversampling * rg.Scene.oversampling)
-			c.r /= srq_oversampling
-			c.g /= srq_oversampling
-			c.b /= srq_oversampling
+			srq_oversampling := float64(rg.Scene.OverSampling * rg.Scene.OverSampling)
+			c.R /= srq_oversampling
+			c.G /= srq_oversampling
+			c.B /= srq_oversampling
 			rg.Scene.Image.SetRGBA(x, y, c.ToPixel())
 			//fmt.Println("check")
 		}
@@ -200,10 +200,24 @@ func (rg *RayGun) renderPixel(line chan int, done chan bool) {
 }
 
 func (rg *RayGun) Write() {
-	path := "/home/leon/Projects/siteview/src/github.com/IMQS/siteview/components/"
+	reset := func(buffer *bytes.Buffer) {
+		buffer.Reset()
+		buffer.WriteString("package components\n\n")
+		buffer.WriteString("import (\n\t\"github.com/IMQS/raygun\"\n)\n\n")
+	}
+	path := "C:/Projects/siteview/src/github.com/IMQS/siteview/components/"
 	buffer := bytes.NewBufferString("")
-	buffer.WriteString("package components\n\n")
-	buffer.WriteString("import (\n\t\"github.com/IMQS/raygun\"\n)\n\n")
+	for _, group := range rg.Scene.GroupList {
+		reset(buffer)
+		buffer.WriteString(fmt.Sprintf("var %s = ", group.Name))
+		fmt.Fprintf(buffer, "%#v\n", group.Name, group)
+		ioutil.WriteFile(path+group.Name+".go", []byte(buffer.String()), os.ModePerm)
+	}
+
+	rg.Scene.GroupList = nil
+	rg.Scene.Image = nil
+	reset(buffer)
+	buffer.WriteString("var scene = ")
 	fmt.Fprintf(buffer, "%#v", rg.Scene)
 	ioutil.WriteFile(path+"scene.go", []byte(buffer.String()), os.ModePerm)
 	// for _, group := range rg.Scene.GroupList {

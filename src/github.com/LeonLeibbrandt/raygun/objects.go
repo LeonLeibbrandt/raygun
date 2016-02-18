@@ -2,7 +2,7 @@ package raygun
 
 import (
 	"bufio"
-	"fmt"
+	"github.com/bmatsuo/go-dfmt/fmt"
 	"math"
 )
 
@@ -26,20 +26,20 @@ type Object interface {
 }
 
 type Base struct {
-	objecttype string
-	material   int
+	ObjectType string
+	MaterialIndex   int
 }
 
 func (b *Base) Type() string {
-	return b.objecttype
+	return b.ObjectType
 }
 
 func (b *Base) Material() int {
-	return b.material
+	return b.MaterialIndex
 }
 
 func (b *Base) SetMaterial(i int) {
-	b.material = i
+	b.MaterialIndex = i
 }
 
 // Sphere
@@ -52,8 +52,8 @@ type Sphere struct {
 func NewSphere(x, y, z, r float64, m int) *Sphere {
 	return &Sphere{
 		Base: Base{
-			objecttype: "sphere",
-			material:   m,
+			ObjectType: "sphere",
+			MaterialIndex:   m,
 		},
 		Position: &Vector{x, y, z},
 		Radius:   r,
@@ -121,15 +121,15 @@ func (e *Sphere) Furthest(point *Vector) float64 {
 	return e.Position.Sub(point).Module() + e.Radius
 }
 
-func (e *Sphere) String() string {
-	return fmt.Sprintf("<Esf: %d %s %.2f>", e.Material, e.Position.String(), e.Radius)
-}
+// func (e *Sphere) String() string {
+// 	return fmt.Sprintf("<Esf: %d %s %.2f>", e.Material, e.Position.String(), e.Radius)
+// }
 
 func (e *Sphere) Write(buffer *bufio.Writer) {
 	buffer.WriteString(fmt.Sprintf("raygun.NewSphere(%.2f, %.2f, %.2f, %.2f, %v),\n",
-		e.Position.x,
-		e.Position.y,
-		e.Position.z,
+		e.Position.X,
+		e.Position.Y,
+		e.Position.Z,
 		e.Radius,
 		e.Material()))
 }
@@ -143,16 +143,16 @@ type Plane struct {
 	Width      float64 // Only two of these will be used for plane, the one in the "normal" direction MUST be 0.0
 	Height     float64
 	Depth      float64
-	halfWidth  float64
-	halfHeight float64
-	halfDepth  float64
+	HalfWidth  float64
+	HalfHeight float64
+	HalfDepth  float64
 }
 
 func NewPlane(xp, yp, zp, xn, yn, zn, r, w, h, d float64, m int) *Plane {
 	p := &Plane{
 		Base: Base{
-			objecttype: "plane",
-			material:   m,
+			ObjectType: "plane",
+			MaterialIndex:   m,
 		},
 		Position:   &Vector{xp, yp, zp},
 		Normal:     (&Vector{xn, yn, zn}).Normalize(),
@@ -160,17 +160,16 @@ func NewPlane(xp, yp, zp, xn, yn, zn, r, w, h, d float64, m int) *Plane {
 		Width:      w,
 		Height:     h,
 		Depth:      d,
-		halfWidth:  w / 2.0,
-		halfHeight: h / 2.0,
-		halfDepth:  d / 2.0,
+		HalfWidth:  w / 2.0,
+		HalfHeight: h / 2.0,
+		HalfDepth:  d / 2.0,
 	}
-	// fmt.Printf("%#v\n", p)
+
 	return p
 }
 
-var done = false
-
 func (p *Plane) HitBounds(r *Ray) bool {
+
 	v := p.Normal.Dot(r.direction)
 	if v == 0 {
 		return false
@@ -179,17 +178,17 @@ func (p *Plane) HitBounds(r *Ray) bool {
 	if t < 0.0 {
 		return false
 	}
-	// We have a finite plane
+
 	interPoint := r.origin.Add(r.direction.Mul(t))
-	if p.halfWidth > 0.0 && (interPoint.x < p.Position.x-p.halfWidth || interPoint.x > p.Position.x+p.halfWidth) {
+	if p.HalfWidth > 0.0 && (interPoint.X < p.Position.X-p.HalfWidth || interPoint.X > p.Position.X+p.HalfWidth) {
 		return false
 	}
 
-	if p.halfHeight > 0.0 && (interPoint.y < p.Position.y-p.halfHeight || interPoint.y > p.Position.y+p.halfHeight) {
+	if p.HalfHeight > 0.0 && (interPoint.Y < p.Position.Y-p.HalfHeight || interPoint.Y > p.Position.Y+p.HalfHeight) {
 		return false
 	}
 
-	if p.halfDepth > 0.0 && (interPoint.z < p.Position.z-p.halfDepth || interPoint.z > p.Position.z+p.halfDepth) {
+	if p.HalfDepth > 0.0 && (interPoint.Z < p.Position.Z-p.HalfDepth || interPoint.Z > p.Position.Z+p.HalfDepth) {
 		return false
 	}
 
@@ -217,9 +216,9 @@ func (p *Plane) Intersect(r *Ray, g, i int) bool {
 	if p.Width > 0.0 {
 		// We have a finite plane
 		interPoint := r.origin.Add(r.direction.Mul(t))
-		if interPoint.x < p.Position.x-p.halfWidth || interPoint.x > p.Position.x+p.halfWidth ||
-			interPoint.y < p.Position.y-p.halfHeight || interPoint.y > p.Position.y+p.halfHeight ||
-			interPoint.z < p.Position.z-p.halfDepth || interPoint.z > p.Position.z+p.halfDepth {
+		if interPoint.X < p.Position.X-p.HalfWidth || interPoint.X > p.Position.X+p.HalfWidth ||
+			interPoint.Y < p.Position.Y-p.HalfHeight || interPoint.Y > p.Position.Y+p.HalfHeight ||
+			interPoint.Z < p.Position.Z-p.HalfDepth || interPoint.Z > p.Position.Z+p.HalfDepth {
 			return false
 		}
 	}
@@ -239,18 +238,18 @@ func (p *Plane) Furthest(point *Vector) float64 {
 	return p.Position.Sub(point).Module() + p.Radius + p.Width/2.0
 }
 
-func (p *Plane) String() string {
-	return fmt.Sprintf("<Pla: %d %s %.2f>", p.Material, p.Normal.String(), p.Radius)
-}
+// func (p *Plane) String() string {
+// 	return fmt.Sprintf("<Pla: %d %s %.2f>", p.Material, p.Normal.String(), p.Radius)
+// }
 
 func (p *Plane) Write(buffer *bufio.Writer) {
 	buffer.WriteString(fmt.Sprintf("raygun.NewPlane(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
-		p.Position.x,
-		p.Position.y,
-		p.Position.z,
-		p.Normal.x,
-		p.Normal.y,
-		p.Normal.z,
+		p.Position.X,
+		p.Position.Y,
+		p.Position.Z,
+		p.Normal.X,
+		p.Normal.Y,
+		p.Normal.Z,
 		p.Radius,
 		p.Width,
 		p.Material()))
@@ -264,15 +263,15 @@ type Cube struct {
 	Width    float64
 	Height   float64
 	Depth    float64
-	min      *Vector
-	max      *Vector
+	Min      *Vector
+	Max      *Vector
 }
 
 func NewCube(x, y, z, w, h, d float64, m int) *Cube {
 	c := &Cube{
 		Base: Base{
-			objecttype: "cube",
-			material:   m,
+			ObjectType: "cube",
+			MaterialIndex:   m,
 		},
 		Position: &Vector{x, y, z},
 		Width:    w, // x direction
@@ -284,11 +283,11 @@ func NewCube(x, y, z, w, h, d float64, m int) *Cube {
 }
 
 func (c *Cube) Intersect(r *Ray, g, i int) bool {
-	n := c.min.Sub(r.origin).Div(r.direction)
-	f := c.max.Sub(r.origin).Div(r.direction)
+	n := c.Min.Sub(r.origin).Div(r.direction)
+	f := c.Max.Sub(r.origin).Div(r.direction)
 	n, f = n.Min(f), n.Max(f)
-	t0 := math.Max(math.Max(n.x, n.y), n.z)
-	t1 := math.Min(math.Min(f.x, f.y), f.z)
+	t0 := math.Max(math.Max(n.X, n.Y), n.Z)
+	t1 := math.Min(math.Min(f.X, f.Y), f.Z)
 	if t0 > 0 && t0 < t1 {
 		if t0 > r.interDist {
 			return false
@@ -304,32 +303,32 @@ func (c *Cube) Intersect(r *Ray, g, i int) bool {
 func (c *Cube) getNormal(point *Vector) *Vector {
 
 	switch {
-	case point.x < c.min.x+EPS:
+	case point.X < c.Min.X+EPS:
 		return &Vector{-1, 0, 0}
-	case point.x > c.max.x-EPS:
+	case point.X > c.Max.X-EPS:
 		return &Vector{1, 0, 0}
-	case point.y < c.min.y+EPS:
+	case point.Y < c.Min.Y+EPS:
 		return &Vector{0, -1, 0}
-	case point.y > c.max.y-EPS:
+	case point.Y > c.Max.Y-EPS:
 		return &Vector{0, 1, 0}
-	case point.z < c.min.z+EPS:
+	case point.Z < c.Min.Z+EPS:
 		return &Vector{0, 0, -1}
-	case point.z > c.max.z-EPS:
+	case point.Z > c.Max.Z-EPS:
 		return &Vector{0, 0, 1}
 	}
 	return &Vector{0, 1, 0}
 }
 
 func (c *Cube) initMinMax() {
-	c.min = &Vector{
-		c.Position.x - c.Width/2.0,
-		c.Position.y - c.Height/2.0,
-		c.Position.z,
+	c.Min = &Vector{
+		c.Position.X - c.Width/2.0,
+		c.Position.Y - c.Height/2.0,
+		c.Position.Z,
 	}
-	c.max = &Vector{
-		c.Position.x + c.Width/2.0,
-		c.Position.y + c.Height/2.0,
-		c.Position.z + c.Depth,
+	c.Max = &Vector{
+		c.Position.X + c.Width/2.0,
+		c.Position.Y + c.Height/2.0,
+		c.Position.Z + c.Depth,
 	}
 }
 
@@ -340,9 +339,9 @@ func (c *Cube) Furthest(point *Vector) float64 {
 
 func (c *Cube) Write(buffer *bufio.Writer) {
 	buffer.WriteString(fmt.Sprintf("raygun.NewCube(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
-		c.Position.x,
-		c.Position.y,
-		c.Position.z,
+		c.Position.X,
+		c.Position.Y,
+		c.Position.Z,
 		c.Width,
 		c.Height,
 		c.Depth,
@@ -356,15 +355,15 @@ type Cylinder struct {
 	Direction *Vector
 	Length    float64
 	Radius    float64
-	startDisc *Plane
-	endDisc   *Plane
+	StartDisc *Plane
+	EndDisc   *Plane
 }
 
 func NewCylinder(xp, yp, zp, xd, yd, zd, l, r float64, m int) *Cylinder {
 	c := &Cylinder{
 		Base: Base{
-			objecttype: "cylinder",
-			material:   m,
+			ObjectType: "cylinder",
+			MaterialIndex:   m,
 		},
 		Position:  &Vector{xp, yp, zp},
 		Direction: (&Vector{xd, yd, zd}).Normalize(),
@@ -373,11 +372,11 @@ func NewCylinder(xp, yp, zp, xd, yd, zd, l, r float64, m int) *Cylinder {
 	}
 	pos := c.Position
 	dir := c.Direction.Mul(-1)
-	c.startDisc = NewPlane(pos.x, pos.y, pos.z, dir.x, dir.y, dir.z, c.Radius, 0.0, 0.0, 0.0, c.Material())
+	c.StartDisc = NewPlane(pos.X, pos.Y, pos.Z, dir.X, dir.Y, dir.Z, c.Radius, 0.0, 0.0, 0.0, c.Material())
 
 	pos = c.Position.Add(c.Direction.Mul(c.Length))
 	dir = c.Direction
-	c.endDisc = NewPlane(pos.x, pos.y, pos.z, dir.x, dir.y, dir.z, c.Radius, 0.0, 0.0, 0.0, c.Material())
+	c.EndDisc = NewPlane(pos.X, pos.Y, pos.Z, dir.X, dir.Y, dir.Z, c.Radius, 0.0, 0.0, 0.0, c.Material())
 	return c
 }
 
@@ -459,9 +458,9 @@ func (y *Cylinder) Intersect(r *Ray, g, i int) bool {
 }
 func (y *Cylinder) intersectCap(r *Ray, start bool) bool {
 	if start {
-		return y.startDisc.Intersect(r, 0, 0)
+		return y.StartDisc.Intersect(r, 0, 0)
 	}
-	return y.endDisc.Intersect(r, 0, 0)
+	return y.EndDisc.Intersect(r, 0, 0)
 }
 
 func (y *Cylinder) getNormal(point *Vector) *Vector {
@@ -477,12 +476,12 @@ func (y *Cylinder) Furthest(point *Vector) float64 {
 
 func (y *Cylinder) Write(buffer *bufio.Writer) {
 	buffer.WriteString(fmt.Sprintf("raygun.NewCylinder(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
-		y.Position.x,
-		y.Position.y,
-		y.Position.z,
-		y.Direction.x,
-		y.Direction.y,
-		y.Direction.z,
+		y.Position.X,
+		y.Position.Y,
+		y.Position.Z,
+		y.Direction.X,
+		y.Direction.Y,
+		y.Direction.Z,
 		y.Length,
 		y.Radius,
 		y.Material(),
