@@ -1,8 +1,6 @@
 package raygun
 
 import (
-	"bufio"
-	"fmt"
 	"math"
 )
 
@@ -22,12 +20,11 @@ type Object interface {
 	Intersect(r *Ray, g, i int) bool
 	getNormal(point *Vector) *Vector
 	Furthest(point *Vector) float64
-	Write(*bufio.Writer)
 }
 
 type Base struct {
-	ObjectType string
-	MaterialIndex   int
+	ObjectType    string
+	MaterialIndex int
 }
 
 func (b *Base) Type() string {
@@ -52,8 +49,8 @@ type Sphere struct {
 func NewSphere(x, y, z, r float64, m int) *Sphere {
 	return &Sphere{
 		Base: Base{
-			ObjectType: "sphere",
-			MaterialIndex:   m,
+			ObjectType:    "sphere",
+			MaterialIndex: m,
 		},
 		Position: &Vector{x, y, z},
 		Radius:   r,
@@ -125,15 +122,6 @@ func (e *Sphere) Furthest(point *Vector) float64 {
 // 	return fmt.Sprintf("<Esf: %d %s %.2f>", e.Material, e.Position.String(), e.Radius)
 // }
 
-func (e *Sphere) Write(buffer *bufio.Writer) {
-	buffer.WriteString(fmt.Sprintf("raygun.NewSphere(%.2f, %.2f, %.2f, %.2f, %v),\n",
-		e.Position.X,
-		e.Position.Y,
-		e.Position.Z,
-		e.Radius,
-		e.Material()))
-}
-
 // PLANE
 type Plane struct {
 	Base
@@ -151,8 +139,8 @@ type Plane struct {
 func NewPlane(xp, yp, zp, xn, yn, zn, r, w, h, d float64, m int) *Plane {
 	p := &Plane{
 		Base: Base{
-			ObjectType: "plane",
-			MaterialIndex:   m,
+			ObjectType:    "plane",
+			MaterialIndex: m,
 		},
 		Position:   &Vector{xp, yp, zp},
 		Normal:     (&Vector{xn, yn, zn}).Normalize(),
@@ -238,23 +226,6 @@ func (p *Plane) Furthest(point *Vector) float64 {
 	return p.Position.Sub(point).Module() + p.Radius + p.Width/2.0
 }
 
-// func (p *Plane) String() string {
-// 	return fmt.Sprintf("<Pla: %d %s %.2f>", p.Material, p.Normal.String(), p.Radius)
-// }
-
-func (p *Plane) Write(buffer *bufio.Writer) {
-	buffer.WriteString(fmt.Sprintf("raygun.NewPlane(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
-		p.Position.X,
-		p.Position.Y,
-		p.Position.Z,
-		p.Normal.X,
-		p.Normal.Y,
-		p.Normal.Z,
-		p.Radius,
-		p.Width,
-		p.Material()))
-}
-
 // Cube
 
 type Cube struct {
@@ -270,8 +241,8 @@ type Cube struct {
 func NewCube(x, y, z, w, h, d float64, m int) *Cube {
 	c := &Cube{
 		Base: Base{
-			ObjectType: "cube",
-			MaterialIndex:   m,
+			ObjectType:    "cube",
+			MaterialIndex: m,
 		},
 		Position: &Vector{x, y, z},
 		Width:    w, // x direction
@@ -337,18 +308,6 @@ func (c *Cube) Furthest(point *Vector) float64 {
 	return c.Position.Sub(point).Module() + max
 }
 
-func (c *Cube) Write(buffer *bufio.Writer) {
-	buffer.WriteString(fmt.Sprintf("raygun.NewCube(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
-		c.Position.X,
-		c.Position.Y,
-		c.Position.Z,
-		c.Width,
-		c.Height,
-		c.Depth,
-		c.Material(),
-	))
-}
-
 type Cylinder struct {
 	Base
 	Position  *Vector
@@ -362,8 +321,8 @@ type Cylinder struct {
 func NewCylinder(xp, yp, zp, xd, yd, zd, l, r float64, m int) *Cylinder {
 	c := &Cylinder{
 		Base: Base{
-			ObjectType: "cylinder",
-			MaterialIndex:   m,
+			ObjectType:    "cylinder",
+			MaterialIndex: m,
 		},
 		Position:  &Vector{xp, yp, zp},
 		Direction: (&Vector{xd, yd, zd}).Normalize(),
@@ -472,18 +431,4 @@ func (y *Cylinder) getNormal(point *Vector) *Vector {
 
 func (y *Cylinder) Furthest(point *Vector) float64 {
 	return y.Position.Sub(point).Module() + y.Length + y.Radius
-}
-
-func (y *Cylinder) Write(buffer *bufio.Writer) {
-	buffer.WriteString(fmt.Sprintf("raygun.NewCylinder(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
-		y.Position.X,
-		y.Position.Y,
-		y.Position.Z,
-		y.Direction.X,
-		y.Direction.Y,
-		y.Direction.Z,
-		y.Length,
-		y.Radius,
-		y.Material(),
-	))
 }

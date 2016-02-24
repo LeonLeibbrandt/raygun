@@ -3,7 +3,6 @@ package raygun
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"image"
 	"io"
 	"math"
@@ -224,9 +223,6 @@ func (sc *Scene) ObjectCount() int {
 	return count
 }
 
-func (sc *Scene) String() string {
-	return fmt.Sprintf("var scene = &raygun.Scene{}\n")
-}
 
 // Auxiliary Methods
 func ParseVector(line []string) *Vector {

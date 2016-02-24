@@ -1,10 +1,8 @@
 package raygun
 
 import (
-	"bytes"
 	"fmt"
 	"image/jpeg"
-	"io/ioutil"
 	"math"
 	"os"
 )
@@ -73,8 +71,13 @@ func (rg *RayGun) calcShadow(r *Ray, collisionObj, collisionGrp int) float64 {
 			r.interObj = -1
 			r.interGrp = -1
 			r.interDist = MAX_DIST
+			grpCheck := true
 
-			if obj.Intersect(r, g, i) && g != collisionGrp && i != collisionObj {
+			if len(rg.Scene.GroupList) > 1 && g == collisionGrp {
+				grpCheck = false
+			}
+
+			if obj.Intersect(r, g, i) && grpCheck && i != collisionObj {
 				shadow *= rg.Scene.MaterialList[obj.Material()].TransmitCol
 			}
 		}
@@ -113,9 +116,9 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 				if NL > 0.0 {
 					if rg.Scene.MaterialList[matIndex].DifuseCol > 0.0 { // ------- Difuso
 						difuseColor := light.Color.Mul(rg.Scene.MaterialList[matIndex].DifuseCol).Mul(NL)
-						difuseColor.R *= rg.Scene.MaterialList[matIndex].Color.R  * shadow
-						difuseColor.G *= rg.Scene.MaterialList[matIndex].Color.G  * shadow
-						difuseColor.B *= rg.Scene.MaterialList[matIndex].Color.B  * shadow
+						difuseColor.R *= rg.Scene.MaterialList[matIndex].Color.R * shadow
+						difuseColor.G *= rg.Scene.MaterialList[matIndex].Color.G * shadow
+						difuseColor.B *= rg.Scene.MaterialList[matIndex].Color.B * shadow
 						c = c.Add(difuseColor)
 					}
 					if rg.Scene.MaterialList[matIndex].SpecularCol > 0.0 { // ----- Especular
@@ -197,30 +200,4 @@ func (rg *RayGun) renderPixel(line chan int, done chan bool) {
 		}
 	}
 	done <- true
-}
-
-func (rg *RayGun) Write() {
-	reset := func(buffer *bytes.Buffer) {
-		buffer.Reset()
-		buffer.WriteString("package components\n\n")
-		buffer.WriteString("import (\n\t\"github.com/IMQS/raygun\"\n)\n\n")
-	}
-	path := "C:/Projects/siteview/src/github.com/IMQS/siteview/components/"
-	buffer := bytes.NewBufferString("")
-	for _, group := range rg.Scene.GroupList {
-		reset(buffer)
-		buffer.WriteString(fmt.Sprintf("var %s = ", group.Name))
-		fmt.Fprintf(buffer, "%#v\n", group.Name, group)
-		ioutil.WriteFile(path+group.Name+".go", []byte(buffer.String()), os.ModePerm)
-	}
-
-	rg.Scene.GroupList = nil
-	rg.Scene.Image = nil
-	reset(buffer)
-	buffer.WriteString("var scene = ")
-	fmt.Fprintf(buffer, "%#v", rg.Scene)
-	ioutil.WriteFile(path+"scene.go", []byte(buffer.String()), os.ModePerm)
-	// for _, group := range rg.Scene.GroupList {
-	// 	group.Write(buffer)
-	// }
 }
