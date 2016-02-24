@@ -2,7 +2,7 @@ package raygun
 
 import (
 	"bytes"
-	"github.com/bmatsuo/go-dfmt/fmt"
+	"fmt"
 	"image/jpeg"
 	"io/ioutil"
 	"math"
@@ -68,17 +68,17 @@ func (rg *RayGun) Render() {
 
 func (rg *RayGun) calcShadow(r *Ray, collisionObj, collisionGrp int) float64 {
 	shadow := 1.0 //starts with no shadow
-	// for g, grp := range rg.Scene.GroupList {
-	//	for i, obj := range grp.ObjectList {
-	//		r.interObj = -1
-	//		r.interGrp = -1
-	//		r.interDist = MAX_DIST
-	//
-	//			if obj.Intersect(r, g, i) && g != collisionGrp && i != collisionObj {
-	//				shadow *= rg.Scene.MaterialList[obj.Material()].TransmitCol
-	//			}
-	//		}
-	//	}
+	for g, grp := range rg.Scene.GroupList {
+		for i, obj := range grp.ObjectList {
+			r.interObj = -1
+			r.interGrp = -1
+			r.interDist = MAX_DIST
+
+			if obj.Intersect(r, g, i) && g != collisionGrp && i != collisionObj {
+				shadow *= rg.Scene.MaterialList[obj.Material()].TransmitCol
+			}
+		}
+	}
 	return shadow
 }
 
@@ -106,16 +106,16 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 			case "point":
 				lightDir := light.Position.Sub(interPoint)
 				lightDir = lightDir.Normalize()
-				// lightRay := Ray{interPoint, lightDir, MAX_DIST, -1, -1}
-				// shadow := rg.calcShadow(&lightRay, r.interObj, r.interGrp)
+				lightRay := NewRay(interPoint, lightDir)
+				shadow := rg.calcShadow(lightRay, r.interObj, r.interGrp)
 				NL := vNormal.Dot(lightDir)
 
 				if NL > 0.0 {
 					if rg.Scene.MaterialList[matIndex].DifuseCol > 0.0 { // ------- Difuso
 						difuseColor := light.Color.Mul(rg.Scene.MaterialList[matIndex].DifuseCol).Mul(NL)
-						difuseColor.R *= rg.Scene.MaterialList[matIndex].Color.R // * shadow
-						difuseColor.G *= rg.Scene.MaterialList[matIndex].Color.G // * shadow
-						difuseColor.B *= rg.Scene.MaterialList[matIndex].Color.B // * shadow
+						difuseColor.R *= rg.Scene.MaterialList[matIndex].Color.R  * shadow
+						difuseColor.G *= rg.Scene.MaterialList[matIndex].Color.G  * shadow
+						difuseColor.B *= rg.Scene.MaterialList[matIndex].Color.B  * shadow
 						c = c.Add(difuseColor)
 					}
 					if rg.Scene.MaterialList[matIndex].SpecularCol > 0.0 { // ----- Especular
@@ -123,7 +123,7 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 						spec := originBackV.Dot(R)
 						if spec > 0.0 {
 							spec = rg.Scene.MaterialList[matIndex].SpecularCol * math.Pow(spec, rg.Scene.MaterialList[matIndex].SpecularD)
-							specularColor := light.Color.Mul(spec) // .Mul(shadow)
+							specularColor := light.Color.Mul(spec).Mul(shadow)
 							c = c.Add(specularColor)
 						}
 					}

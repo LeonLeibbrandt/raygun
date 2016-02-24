@@ -2,7 +2,7 @@ package raygun
 
 import (
 	"bufio"
-	"github.com/bmatsuo/go-dfmt/fmt"
+	"fmt"
 	"math"
 )
 

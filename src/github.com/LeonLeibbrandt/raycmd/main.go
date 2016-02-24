@@ -23,8 +23,8 @@ func main() {
 		panic(err)
 	}
 
-	// rg.Render()
-	rg.Write()
+	rg.Render()
+	// rg.Write()
 	taken := time.Since(start)
 	fmt.Printf("Time taken : %s for %v objects\n", taken, rg.Scene.ObjectCount())
 }
