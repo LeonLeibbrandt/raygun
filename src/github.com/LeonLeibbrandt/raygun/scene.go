@@ -107,7 +107,7 @@ func NewScene(sceneFilename string) *Scene {
 			scn.EndLine = scn.ImgHeight - 1 // End rendering line
 		case "nbounces":
 			scn.TraceDepth, _ = strconv.Atoi(data[0]) // n. bounces
-		case "OverSampling":
+		case "oversampling":
 			scn.OverSampling, _ = strconv.Atoi(data[0])
 		case "vision":
 			scn.VisionField, _ = strconv.ParseFloat(data[0], 64)
