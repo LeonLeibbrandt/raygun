@@ -2,7 +2,7 @@ package raygun
 
 import (
 	"fmt"
-	"image/jpeg"
+	"image/png"
 	"math"
 	"os"
 )
@@ -50,13 +50,12 @@ func (rg *RayGun) Render() {
 		<-rg.Done
 	}
 
-	output, err := os.Create(rg.FileName + ".jpg")
+	output, err := os.Create(rg.FileName + ".png")
 	if err != nil {
 		panic(err)
 	}
 
-	err = jpeg.Encode(output, rg.Scene.Image, nil)
-	// err = png.Encode(output, rg.Scene.Image)
+	err = png.Encode(output, rg.Scene.Image)
 	if err != nil {
 		panic(err)
 	}
