@@ -1,10 +1,12 @@
 package raygun
 
 import (
+	"bytes"
 	"fmt"
-	"image/png"
+	"io/ioutil"
 	"math"
 	"os"
+	"time"
 )
 
 const (
@@ -21,24 +23,22 @@ type RayGun struct {
 	Line       chan int
 }
 
-func NewRayGun(filename string, numworkers int) (*RayGun, error) {
+func NewRayGun(scene *Scene, numworkers int) (*RayGun, error) {
 	rg := &RayGun{
-		FileName:   filename,
 		NumWorkers: numworkers,
-		Scene:      NewScene(filename),
+		Scene:      scene,
 		Done:       make(chan bool, numworkers),
 		Line:       make(chan int),
 	}
 	return rg, nil
 }
 
+// Render renders the scene and returns a jpeg that has been base64 encoded
 func (rg *RayGun) Render() {
+	start := time.Now()
 	for i := 0; i < rg.NumWorkers; i++ {
 		go rg.renderPixel(rg.Line, rg.Done)
 	}
-
-	fmt.Println("Rendering: ", rg.FileName)
-	fmt.Printf("Line (from %d to %d): ", rg.Scene.StartLine, rg.Scene.EndLine)
 
 	for y := rg.Scene.StartLine; y < rg.Scene.EndLine; y++ {
 		rg.Line <- y
@@ -50,17 +50,8 @@ func (rg *RayGun) Render() {
 		<-rg.Done
 	}
 
-	output, err := os.Create(rg.FileName + ".png")
-	if err != nil {
-		panic(err)
-	}
-
-	err = png.Encode(output, rg.Scene.Image)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("DONE!")
-
+	elapsed := time.Since(start)
+	fmt.Printf("Time %s\n", elapsed)
 }
 
 func (rg *RayGun) calcShadow(r *Ray, collisionObj, collisionGrp int) float64 {
@@ -70,13 +61,8 @@ func (rg *RayGun) calcShadow(r *Ray, collisionObj, collisionGrp int) float64 {
 			r.interObj = -1
 			r.interGrp = -1
 			r.interDist = MAX_DIST
-			grpCheck := true
 
-			if len(rg.Scene.GroupList) > 1 && g == collisionGrp {
-				grpCheck = false
-			}
-
-			if obj.Intersect(r, g, i) && grpCheck && i != collisionObj {
+			if obj.Intersect(r, g, i) && g != collisionGrp && i != collisionObj {
 				shadow *= rg.Scene.MaterialList[obj.Material()].TransmitCol
 			}
 		}
@@ -108,16 +94,16 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 			case "point":
 				lightDir := light.Position.Sub(interPoint)
 				lightDir = lightDir.Normalize()
-				lightRay := NewRay(interPoint, lightDir)
-				shadow := rg.calcShadow(lightRay, r.interObj, r.interGrp)
+				// lightRay := Ray{interPoint, lightDir, MAX_DIST, -1, -1}
+				// shadow := rg.calcShadow(&lightRay, r.interObj, r.interGrp)
 				NL := vNormal.Dot(lightDir)
 
 				if NL > 0.0 {
 					if rg.Scene.MaterialList[matIndex].DifuseCol > 0.0 { // ------- Difuso
 						difuseColor := light.Color.Mul(rg.Scene.MaterialList[matIndex].DifuseCol).Mul(NL)
-						difuseColor.R *= rg.Scene.MaterialList[matIndex].Color.R * shadow
-						difuseColor.G *= rg.Scene.MaterialList[matIndex].Color.G * shadow
-						difuseColor.B *= rg.Scene.MaterialList[matIndex].Color.B * shadow
+						difuseColor.R *= rg.Scene.MaterialList[matIndex].Color.R // * shadow
+						difuseColor.G *= rg.Scene.MaterialList[matIndex].Color.G // * shadow
+						difuseColor.B *= rg.Scene.MaterialList[matIndex].Color.B // * shadow
 						c = c.Add(difuseColor)
 					}
 					if rg.Scene.MaterialList[matIndex].SpecularCol > 0.0 { // ----- Especular
@@ -125,7 +111,7 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 						spec := originBackV.Dot(R)
 						if spec > 0.0 {
 							spec = rg.Scene.MaterialList[matIndex].SpecularCol * math.Pow(spec, rg.Scene.MaterialList[matIndex].SpecularD)
-							specularColor := light.Color.Mul(spec).Mul(shadow)
+							specularColor := light.Color.Mul(spec) // .Mul(shadow)
 							c = c.Add(specularColor)
 						}
 					}
@@ -192,11 +178,33 @@ func (rg *RayGun) renderPixel(line chan int, done chan bool) {
 			c.G /= srq_oversampling
 			c.B /= srq_oversampling
 			rg.Scene.Image.SetRGBA(x, y, c.ToPixel())
-			//fmt.Println("check")
-		}
-		if y%100 == 0 {
-			fmt.Printf("%d ", y)
 		}
 	}
 	done <- true
+}
+
+func (rg *RayGun) Write() {
+	reset := func(buffer *bytes.Buffer) {
+		buffer.Reset()
+		buffer.WriteString("package components\n\n")
+		buffer.WriteString("import (\n\t\"github.com/IMQS/raygun\"\n)\n\n")
+	}
+	path := "C:/Projects/siteview/src/github.com/IMQS/siteview/components/"
+	buffer := bytes.NewBufferString("")
+	for _, group := range rg.Scene.GroupList {
+		reset(buffer)
+		buffer.WriteString(fmt.Sprintf("var %s = ", group.Name))
+		fmt.Fprintf(buffer, "%#v\n", group.Name, group)
+		ioutil.WriteFile(path+group.Name+".go", []byte(buffer.String()), os.ModePerm)
+	}
+
+	rg.Scene.GroupList = nil
+	rg.Scene.Image = nil
+	reset(buffer)
+	buffer.WriteString("var scene = ")
+	fmt.Fprintf(buffer, "%#v", rg.Scene)
+	ioutil.WriteFile(path+"scene.go", []byte(buffer.String()), os.ModePerm)
+	// for _, group := range rg.Scene.GroupList {
+	// 	group.Write(buffer)
+	// }
 }
