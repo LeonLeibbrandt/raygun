@@ -3,6 +3,7 @@ package raygun
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"image"
 	"io"
 	"math"
@@ -46,9 +47,6 @@ func NewScene(sceneFilename string) *Scene {
 	scn.TraceDepth = 3   // bounces
 	scn.OverSampling = 1 // no OverSampling
 	scn.VisionField = 60
-
-	scn.StartLine = 0 // Start rendering line
-	scn.EndLine = scn.ImgHeight - 1
 
 	//scn.ObjectList = append(scn.ObjectList, Sphere{0,0.0,0.0,0.0,0.0})
 
@@ -187,32 +185,65 @@ func NewScene(sceneFilename string) *Scene {
 		panic(err)
 	}
 
-	scn.Image = image.NewRGBA(image.Rect(0, 0, scn.ImgWidth, scn.ImgHeight))
+	scn.Init()
 
-	scn.GridWidth = scn.ImgWidth * scn.OverSampling
-	scn.GridHeight = scn.ImgHeight * scn.OverSampling
+	scn.CalcBounds()
 
-	scn.Look = scn.CameraLook.Sub(scn.CameraPos)
-	scn.Vhor = scn.Look.Cross(scn.CameraUp)
-	scn.Vhor = scn.Vhor.Normalize()
+	return scn
+}
 
-	scn.Vver = scn.Look.Cross(scn.Vhor)
-	scn.Vver = scn.Vver.Normalize()
+func NewSceneFromParams(imgWidth, imgHeight, traceDepth, overSampling int,
+	visionField float64,
+	cameraPos, cameraLook, cameraUp *Vector) *Scene {
+	scn := &Scene{
+		ImgWidth:     imgWidth,
+		ImgHeight:    imgHeight,
+		TraceDepth:   traceDepth,
+		OverSampling: overSampling,
+		VisionField:  visionField,
+		CameraPos:    cameraPos,
+		CameraLook:   cameraLook,
+		CameraUp:     cameraUp,
+	}
 
-	fl := float64(scn.GridWidth) / (2 * math.Tan((0.5*scn.VisionField)*PI_180))
+	scn.Init()
 
-	Vp := scn.Look.Normalize()
+	return scn
+}
 
-	Vp.X = Vp.X*fl - 0.5*(float64(scn.GridWidth)*scn.Vhor.X+float64(scn.GridHeight)*scn.Vver.X)
-	Vp.Y = Vp.Y*fl - 0.5*(float64(scn.GridWidth)*scn.Vhor.Y+float64(scn.GridHeight)*scn.Vver.Y)
-	Vp.Z = Vp.Z*fl - 0.5*(float64(scn.GridWidth)*scn.Vhor.Z+float64(scn.GridHeight)*scn.Vver.Z)
+func (sc *Scene) Init() {
 
-	scn.Vp = Vp
+	sc.StartLine = 0 // Start rendering line
+	sc.EndLine = sc.ImgHeight - 1
 
-	for _, grp := range scn.GroupList {
+	sc.Image = image.NewRGBA(image.Rect(0, 0, sc.ImgWidth, sc.ImgHeight))
+
+	sc.GridWidth = sc.ImgWidth * sc.OverSampling
+	sc.GridHeight = sc.ImgHeight * sc.OverSampling
+
+	sc.Look = sc.CameraLook.Sub(sc.CameraPos)
+	sc.Vhor = sc.Look.Cross(sc.CameraUp)
+	sc.Vhor = sc.Vhor.Normalize()
+
+	sc.Vver = sc.Look.Cross(sc.Vhor)
+	sc.Vver = sc.Vver.Normalize()
+
+	fl := float64(sc.GridWidth) / (2 * math.Tan((0.5*sc.VisionField)*PI_180))
+
+	Vp := sc.Look.Normalize()
+
+	Vp.X = Vp.X*fl - 0.5*(float64(sc.GridWidth)*sc.Vhor.X+float64(sc.GridHeight)*sc.Vver.X)
+	Vp.Y = Vp.Y*fl - 0.5*(float64(sc.GridWidth)*sc.Vhor.Y+float64(sc.GridHeight)*sc.Vver.Y)
+	Vp.Z = Vp.Z*fl - 0.5*(float64(sc.GridWidth)*sc.Vhor.Z+float64(sc.GridHeight)*sc.Vver.Z)
+
+	sc.Vp = Vp
+
+}
+
+func (sc *Scene) CalcBounds() {
+	for _, grp := range sc.GroupList {
 		grp.CalcBounds()
 	}
-	return scn
 }
 
 func (sc *Scene) ObjectCount() int {
@@ -223,6 +254,9 @@ func (sc *Scene) ObjectCount() int {
 	return count
 }
 
+func (sc *Scene) String() string {
+	return fmt.Sprintf("var scene = &raygun.Scene{}\n")
+}
 
 // Auxiliary Methods
 func ParseVector(line []string) *Vector {

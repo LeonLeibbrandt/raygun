@@ -4,7 +4,7 @@ size 2048 1536
 nbounces 5
 
 # (optional, default 1) oversampling=1 no oversampling
-oversampling 4
+oversampling 2
 
 # (optional, default 60) vision = size of the visual field
 vision 60

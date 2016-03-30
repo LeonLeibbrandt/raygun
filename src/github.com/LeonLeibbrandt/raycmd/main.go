@@ -1,17 +1,12 @@
 package main
 
 import (
-	// "bufio"
 	"flag"
-	"fmt"
 	"github.com/LeonLeibbrandt/raygun"
-	// "os"
 	"runtime"
-	"time"
 )
 
 func main() {
-	start := time.Now()
 	var sceneFilename string
 	var numWorkers int
 	flag.StringVar(&sceneFilename, "file", "samples/scene.txt", "Scene file to render.")
@@ -24,7 +19,4 @@ func main() {
 	}
 
 	rg.Render()
-	// rg.Write()
-	taken := time.Since(start)
-	fmt.Printf("Time taken : %s for %v objects\n", taken, rg.Scene.ObjectCount())
 }
