@@ -1,3 +1,3 @@
 #!/bin/bash
-find . -name "*~" -delete
+/usr/bin/find . -name "*~" -delete
 
