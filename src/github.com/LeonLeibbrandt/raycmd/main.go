@@ -2,18 +2,26 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/LeonLeibbrandt/raygun"
+	"os"
 	"runtime"
 )
 
 func main() {
-	var sceneFilename string
-	var numWorkers int
-	flag.StringVar(&sceneFilename, "file", "samples/scene.txt", "Scene file to render.")
-	flag.IntVar(&numWorkers, "workers", runtime.NumCPU(), "Number of worker threads.")
+	scenefile := flag.String("scene", "", "Scene file")
+	numcpu := flag.Int("numcpu", 0, "Number Of cores to use")
 	flag.Parse()
 
-	rg, err := raygun.NewRayGun(sceneFilename, numWorkers)
+	if *scenefile == "" {
+		fmt.Println("Usage: raygun --scene path/to/scene.txt --numcpu [Number of cores; defaults to all]")
+		os.Exit(0)
+	}
+	if *numcpu == 0 {
+		*numcpu = runtime.NumCPU()
+	}
+
+	rg, err := raygun.NewRayGun(*scenefile, *numcpu)
 	if err != nil {
 		panic(err)
 	}

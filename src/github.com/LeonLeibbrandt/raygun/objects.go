@@ -1,18 +1,22 @@
 package raygun
 
 import (
+	"bufio"
+	"fmt"
 	"math"
 )
 
+// EPS is used for the nuances of comparing float values.
 const EPS = 1e-9
 
 // http://www.hugi.scene.org/online/coding/hugi%2024%20-%20coding%20graphics%20chris%20dragan%20raytracing%20shapes.htm
 
+// GroupBounds defines a type that has the HitBounds method, such as implemented in Group, Sphere and Plane.
 type GroupBounds interface {
 	HitBounds(r *Ray) bool
 }
 
-// Object
+// Object is the interface all primitives must have to exist in a raytracing scene.
 type Object interface {
 	Type() string
 	Material() int
@@ -20,32 +24,38 @@ type Object interface {
 	Intersect(r *Ray, g, i int) bool
 	getNormal(point *Vector) *Vector
 	Furthest(point *Vector) float64
+	Write(*bufio.Writer)
 }
 
+// Base has the default fields and method that is common to all primitives.
 type Base struct {
 	ObjectType    string
 	MaterialIndex int
 }
 
+// Type defines the type of the object, it is used when parsing a scene file.
 func (b *Base) Type() string {
 	return b.ObjectType
 }
 
+// Material return the index into the material list defined in the scene.
 func (b *Base) Material() int {
 	return b.MaterialIndex
 }
 
+// SetMaterial set the material index to the supplied value.
 func (b *Base) SetMaterial(i int) {
 	b.MaterialIndex = i
 }
 
-// Sphere
+// Sphere is a sphere with position and radius
 type Sphere struct {
 	Base
 	Position *Vector
 	Radius   float64
 }
 
+// NewSphere creates a new sphere from the supplied values.
 func NewSphere(x, y, z, r float64, m int) *Sphere {
 	return &Sphere{
 		Base: Base{
@@ -57,8 +67,9 @@ func NewSphere(x, y, z, r float64, m int) *Sphere {
 	}
 }
 
+// HitBounds checks if the ray hits this speher.
 func (e *Sphere) HitBounds(r *Ray) bool {
-	a := r.a // r.direction.Dot(r.direction)
+	a := r.a
 	X := r.origin.Sub(e.Position)
 	b := 2 * (r.direction.Dot(X))
 	c := X.Dot(X) - e.Radius*e.Radius
@@ -75,6 +86,7 @@ func (e *Sphere) HitBounds(r *Ray) bool {
 	return true
 }
 
+// Intersect calculates if the ray instersect this sphere and at what distance.
 func (e *Sphere) Intersect(r *Ray, g, i int) bool {
 	a := r.a // r.direction.Dot(r.direction)
 	X := r.origin.Sub(e.Position)
@@ -114,15 +126,24 @@ func (e *Sphere) getNormal(point *Vector) *Vector {
 	return normal.Normalize()
 }
 
+// Furthest calculates the firhest distance this sphere can be from a the point.
+// This is used to calculate the group bounds if this sphere is a child of a group.
 func (e *Sphere) Furthest(point *Vector) float64 {
 	return e.Position.Sub(point).Module() + e.Radius
 }
 
-// func (e *Sphere) String() string {
-// 	return fmt.Sprintf("<Esf: %d %s %.2f>", e.Material, e.Position.String(), e.Radius)
-// }
+func (e *Sphere) Write(buffer *bufio.Writer) {
+	buffer.WriteString(fmt.Sprintf("raygun.NewSphere(%.2f, %.2f, %.2f, %.2f, %v),\n",
+		e.Position.X,
+		e.Position.Y,
+		e.Position.Z,
+		e.Radius,
+		e.Material()))
+}
 
-// PLANE
+// Plane is a primitive that has a position and a normal.
+// It has been extended to be a disc - if Radius is set, or a finite plane if width, height
+// and depth are set. The nomal need not be along axis.
 type Plane struct {
 	Base
 	Position   *Vector
@@ -226,6 +247,23 @@ func (p *Plane) Furthest(point *Vector) float64 {
 	return p.Position.Sub(point).Module() + p.Radius + p.Width/2.0
 }
 
+// func (p *Plane) String() string {
+// 	return fmt.Sprintf("<Pla: %d %s %.2f>", p.Material, p.Normal.String(), p.Radius)
+// }
+
+func (p *Plane) Write(buffer *bufio.Writer) {
+	buffer.WriteString(fmt.Sprintf("raygun.NewPlane(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
+		p.Position.X,
+		p.Position.Y,
+		p.Position.Z,
+		p.Normal.X,
+		p.Normal.Y,
+		p.Normal.Z,
+		p.Radius,
+		p.Width,
+		p.Material()))
+}
+
 // Cube
 
 type Cube struct {
@@ -308,6 +346,18 @@ func (c *Cube) Furthest(point *Vector) float64 {
 	return c.Position.Sub(point).Module() + max
 }
 
+func (c *Cube) Write(buffer *bufio.Writer) {
+	buffer.WriteString(fmt.Sprintf("raygun.NewCube(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
+		c.Position.X,
+		c.Position.Y,
+		c.Position.Z,
+		c.Width,
+		c.Height,
+		c.Depth,
+		c.Material(),
+	))
+}
+
 type Cylinder struct {
 	Base
 	Position  *Vector
@@ -345,12 +395,12 @@ func (y *Cylinder) Intersect(r *Ray, g, i int) bool {
 	AB := cylend.Sub(y.Position)
 	AO := r.origin.Sub(y.Position)
 
-	AB_dot_d := AB.Dot(r.direction)
-	AB_dot_AO := AB.Dot(AO)
-	AB_dot_AB := AB.Dot(AB)
+	ABDotD := AB.Dot(r.direction)
+	ABDotAO := AB.Dot(AO)
+	ABDotAB := AB.Dot(AB)
 
-	m := AB_dot_d / AB_dot_AB
-	n := AB_dot_AO / AB_dot_AB
+	m := ABDotD / ABDotAB
+	n := ABDotAO / ABDotAB
 
 	Q := r.direction.Sub(AB.Mul(m))
 	R := AO.Sub(AB.Mul(n))
@@ -390,8 +440,8 @@ func (y *Cylinder) Intersect(r *Ray, g, i int) bool {
 		return false
 	}
 
-	t_k := t*m + n
-	if t_k < 0.0 {
+	tk := t*m + n
+	if tk < 0.0 {
 		// Could be on start cap
 		if y.intersectCap(r, true) && t1 > r.interDist {
 			t = t1
@@ -400,7 +450,7 @@ func (y *Cylinder) Intersect(r *Ray, g, i int) bool {
 		}
 	}
 
-	if t_k > 1.0 {
+	if tk > 1.0 {
 		// Could be on end cap
 		if y.intersectCap(r, false) && t1 > r.interDist {
 			t = t1
@@ -431,4 +481,18 @@ func (y *Cylinder) getNormal(point *Vector) *Vector {
 
 func (y *Cylinder) Furthest(point *Vector) float64 {
 	return y.Position.Sub(point).Module() + y.Length + y.Radius
+}
+
+func (y *Cylinder) Write(buffer *bufio.Writer) {
+	buffer.WriteString(fmt.Sprintf("raygun.NewCylinder(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
+		y.Position.X,
+		y.Position.Y,
+		y.Position.Z,
+		y.Direction.X,
+		y.Direction.Y,
+		y.Direction.Z,
+		y.Length,
+		y.Radius,
+		y.Material(),
+	))
 }

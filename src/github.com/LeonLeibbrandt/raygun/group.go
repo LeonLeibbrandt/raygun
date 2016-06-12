@@ -6,6 +6,9 @@ import (
 	"math"
 )
 
+// Group is a single object in the scene composed of a group of primitives. It also acts as a first
+// rejection mechanism in that the primitives are bounded by a sphere, or plane that is checked first
+// for intersection.
 type Group struct {
 	Name       string
 	Center     *Vector
@@ -14,17 +17,20 @@ type Group struct {
 	Bounds     GroupBounds
 }
 
+// NewGroup creates a new group
 func NewGroup(name string, x, y, z float64, always bool) *Group {
 	s := &Group{
-		Name:       name,
-		Center:     &Vector{x, y, z},
-		Always:     always,
-//		ObjectList: ,
-		Bounds:     nil,
+		Name:   name,
+		Center: &Vector{x, y, z},
+		Always: always,
+		//		ObjectList: ,
+		Bounds: nil,
 	}
 	return s
 }
 
+// CalcBounds calculates the bounds of the group from the primitives if it is not always checked
+// or the bounds object already exists.
 func (g *Group) CalcBounds() {
 	if g.Always {
 		return
@@ -43,6 +49,7 @@ func (g *Group) CalcBounds() {
 	g.Bounds = NewSphere(g.Center.X, g.Center.Y, g.Center.Z, max, 0)
 }
 
+// HitBounds checks for intersection
 func (g *Group) HitBounds(r *Ray) bool {
 	if g.Always {
 		return true
@@ -51,6 +58,14 @@ func (g *Group) HitBounds(r *Ray) bool {
 		return true
 	}
 	return g.Bounds.HitBounds(r)
+}
+
+// SetMaterial sets all the child primitives' material to the supplied value.
+// This is an index into an array as defoined in scene.
+func (g *Group) SetMaterial(i int) {
+	for _, obj := range g.ObjectList {
+		obj.SetMaterial(i)
+	}
 }
 
 func (g *Group) Write(buffer *bufio.Writer) {

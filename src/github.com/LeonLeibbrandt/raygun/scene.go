@@ -30,6 +30,7 @@ type Scene struct {
 	Vhor         *Vector
 	Vver         *Vector
 	Vp           *Vector
+	CalcShadow   bool
 	Image        *image.RGBA
 	GroupList    []*Group
 	LightList    []Light
@@ -40,13 +41,13 @@ func NewScene(sceneFilename string) *Scene {
 	scn := &Scene{}
 	// defaults
 	scn.GroupList = make([]*Group, 0)
-	groupIndex := -1
 	scn.ImgWidth = 320
 	scn.ImgHeight = 200
 
 	scn.TraceDepth = 3   // bounces
 	scn.OverSampling = 1 // no OverSampling
 	scn.VisionField = 60
+	scn.CalcShadow = true
 
 	//scn.ObjectList = append(scn.ObjectList, Sphere{0,0.0,0.0,0.0,0.0})
 
@@ -57,9 +58,56 @@ func NewScene(sceneFilename string) *Scene {
 	defer f.Close()
 
 	r := bufio.NewReaderSize(f, 4*1024)
-	if err != nil {
-		panic(err)
+
+	scn.parseStream(r)
+
+	scn.Init()
+
+	scn.CalcBounds()
+
+	return scn
+}
+
+func NewSceneFromParams(imgWidth, imgHeight, traceDepth, overSampling int,
+	visionField float64,
+	cameraPos, cameraLook, cameraUp *Vector) *Scene {
+	scn := &Scene{
+		ImgWidth:     imgWidth,
+		ImgHeight:    imgHeight,
+		TraceDepth:   traceDepth,
+		OverSampling: overSampling,
+		VisionField:  visionField,
+		CameraPos:    cameraPos,
+		CameraLook:   cameraLook,
+		CameraUp:     cameraUp,
 	}
+
+	scn.Init()
+
+	return scn
+}
+
+func NewSceneFromText(text string) *Scene {
+	scn := &Scene{}
+	// defaults
+	scn.GroupList = make([]*Group, 0)
+	scn.ImgWidth = 320
+	scn.ImgHeight = 200
+
+	scn.TraceDepth = 3   // bounces
+	scn.OverSampling = 1 // no OverSampling
+	scn.VisionField = 60
+	scn.CalcShadow = true
+
+	r := bufio.NewReader(strings.NewReader(text))
+	scn.parseStream(r)
+	scn.Init()
+	scn.CalcBounds()
+	return scn
+}
+
+func (scn *Scene) parseStream(r *bufio.Reader) {
+	groupIndex := -1
 	line, isPrefix, err := r.ReadLine()
 
 	newplane := func(data []string) *Plane {
@@ -119,6 +167,13 @@ func NewScene(sceneFilename string) *Scene {
 			scn.CameraLook = ParseVector(data)
 		case "cameraUp":
 			scn.CameraUp = ParseVector(data)
+
+		case "shadow":
+			if data[0] == "true" {
+				scn.CalcShadow = true
+			} else {
+				scn.CalcShadow = false
+			}
 
 		case "group":
 			var plane GroupBounds
@@ -184,71 +239,46 @@ func NewScene(sceneFilename string) *Scene {
 	if err != io.EOF {
 		panic(err)
 	}
-
-	scn.Init()
-
-	scn.CalcBounds()
-
-	return scn
 }
 
-func NewSceneFromParams(imgWidth, imgHeight, traceDepth, overSampling int,
-	visionField float64,
-	cameraPos, cameraLook, cameraUp *Vector) *Scene {
-	scn := &Scene{
-		ImgWidth:     imgWidth,
-		ImgHeight:    imgHeight,
-		TraceDepth:   traceDepth,
-		OverSampling: overSampling,
-		VisionField:  visionField,
-		CameraPos:    cameraPos,
-		CameraLook:   cameraLook,
-		CameraUp:     cameraUp,
-	}
+func (scn *Scene) Init() {
 
-	scn.Init()
+	scn.StartLine = 0 // Start rendering line
+	scn.EndLine = scn.ImgHeight - 1
 
-	return scn
-}
+	scn.Image = image.NewRGBA(image.Rect(0, 0, scn.ImgWidth, scn.ImgHeight))
 
-func (sc *Scene) Init() {
+	scn.GridWidth = scn.ImgWidth * scn.OverSampling
+	scn.GridHeight = scn.ImgHeight * scn.OverSampling
 
-	sc.StartLine = 0 // Start rendering line
-	sc.EndLine = sc.ImgHeight - 1
+	scn.Look = scn.CameraLook.Sub(scn.CameraPos)
+	scn.Vhor = scn.Look.Cross(scn.CameraUp)
+	scn.Vhor = scn.Vhor.Normalize()
 
-	sc.Image = image.NewRGBA(image.Rect(0, 0, sc.ImgWidth, sc.ImgHeight))
+	scn.Vver = scn.Look.Cross(scn.Vhor)
+	scn.Vver = scn.Vver.Normalize()
 
-	sc.GridWidth = sc.ImgWidth * sc.OverSampling
-	sc.GridHeight = sc.ImgHeight * sc.OverSampling
+	fl := float64(scn.GridWidth) / (2 * math.Tan((0.5*scn.VisionField)*PI_180))
 
-	sc.Look = sc.CameraLook.Sub(sc.CameraPos)
-	sc.Vhor = sc.Look.Cross(sc.CameraUp)
-	sc.Vhor = sc.Vhor.Normalize()
+	Vp := scn.Look.Normalize()
 
-	sc.Vver = sc.Look.Cross(sc.Vhor)
-	sc.Vver = sc.Vver.Normalize()
+	Vp.X = Vp.X*fl - 0.5*(float64(scn.GridWidth)*scn.Vhor.X+float64(scn.GridHeight)*scn.Vver.X)
+	Vp.Y = Vp.Y*fl - 0.5*(float64(scn.GridWidth)*scn.Vhor.Y+float64(scn.GridHeight)*scn.Vver.Y)
+	Vp.Z = Vp.Z*fl - 0.5*(float64(scn.GridWidth)*scn.Vhor.Z+float64(scn.GridHeight)*scn.Vver.Z)
 
-	fl := float64(sc.GridWidth) / (2 * math.Tan((0.5*sc.VisionField)*PI_180))
-
-	Vp := sc.Look.Normalize()
-
-	Vp.X = Vp.X*fl - 0.5*(float64(sc.GridWidth)*sc.Vhor.X+float64(sc.GridHeight)*sc.Vver.X)
-	Vp.Y = Vp.Y*fl - 0.5*(float64(sc.GridWidth)*sc.Vhor.Y+float64(sc.GridHeight)*sc.Vver.Y)
-	Vp.Z = Vp.Z*fl - 0.5*(float64(sc.GridWidth)*sc.Vhor.Z+float64(sc.GridHeight)*sc.Vver.Z)
-
-	sc.Vp = Vp
+	scn.Vp = Vp
 
 }
 
-func (sc *Scene) CalcBounds() {
-	for _, grp := range sc.GroupList {
+func (scn *Scene) CalcBounds() {
+	for _, grp := range scn.GroupList {
 		grp.CalcBounds()
 	}
 }
 
-func (sc *Scene) ObjectCount() int {
+func (scn *Scene) ObjectCount() int {
 	count := 0
-	for _, grp := range sc.GroupList {
+	for _, grp := range scn.GroupList {
 		count = count + len(grp.ObjectList)
 	}
 	return count

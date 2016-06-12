@@ -9,6 +9,8 @@ oversampling 2
 # (optional, default 60) vision = size of the visual field
 vision 60
 
+shadow true
+
 # (optional, default all span) renderslice: start_rendering_line end_rendering_line
 # renderslice note: if you use oversampling>1 it may give problems
 #renderslice 10 40
