@@ -343,7 +343,7 @@ func (c *Cube) initMinMax() {
 
 func (c *Cube) Furthest(point *Vector) float64 {
 	max := math.Max(math.Max(c.Width/2.0, c.Height/2.), c.Depth)
-	return c.Position.Sub(point).Module() + max
+	return c.Position.Sub(point).Module() + 1.5*max
 }
 
 func (c *Cube) Write(buffer *bufio.Writer) {
