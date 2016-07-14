@@ -16,7 +16,7 @@ func (v *Vector) Dot(u *Vector) float64 {
 func (v *Vector) Cross(u *Vector) (*Vector) {
 	r := &Vector{}
 	r.X = u.Y*v.Z - u.Z*v.Y
-	r.Y = u.Z*v.Z - u.X*v.Z
+	r.Y = u.Z*v.X - u.X*v.Z
 	r.Z = u.X*v.Y - u.Y*v.X
 	return r
 }
