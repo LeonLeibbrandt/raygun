@@ -2,12 +2,13 @@ package raygun
 
 // RAY
 type Ray struct {
-	origin    *Vector
-	direction *Vector
-	interDist float64 // MAX_DIST
-	interGrp  int
-	interObj  int
-	a         float64
+	origin     *Vector
+	direction  *Vector
+	interDist  float64 // MAX_DIST
+	interGrp   int
+	interObj   int
+	interColor Color
+	a          float64
 }
 
 func NewRay(origin, direction *Vector) *Ray {

@@ -56,6 +56,10 @@ func (v *Vector) Max(u *Vector) *Vector {
 	return &Vector{math.Max(v.X, u.X), math.Max(v.Y, u.Y), math.Max(v.Z, u.Z)}
 }
 
+func (v *Vector) Eq(u *Vector) bool {
+	return v.X == u.X && v.Y == u.Y && v.Z == u.Z
+}
+
 // func (v *Vector) String() string {
 // 	return fmt.Sprintf("&Vector{ %.2f, %.2f, %.2f},", v.X, v.Y, v.Z)
 // }

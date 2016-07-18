@@ -52,8 +52,7 @@ func (rg *RayGun) Render() {
 		go rg.renderPixel(rg.Line, rg.Done)
 	}
 
-	fmt.Println("Rendering: ", rg.FileName)
-	fmt.Printf("With Shadow %v ", rg.Scene.CalcShadow)
+	fmt.Printf("Rendering: %s\n", rg.FileName)
 	fmt.Printf("Line (from %d to %d): ", rg.Scene.StartLine, rg.Scene.EndLine)
 
 	for y := rg.Scene.StartLine; y < rg.Scene.EndLine; y++ {
@@ -93,8 +92,8 @@ func (rg *RayGun) calcShadow(r *Ray, collisionObj, collisionGrp int) float64 {
 				grpCheck = false
 			}
 
-			if obj.Intersect(r, g, i) && grpCheck && i != collisionObj {
-				shadow *= rg.Scene.MaterialList[obj.Material()].TransmitCol
+			if obj.GetIntersect(r, g, i) && grpCheck && i != collisionObj {
+				shadow *= obj.GetMaterial().TransmitCol
 			}
 		}
 	}
@@ -107,17 +106,18 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 			continue
 		}
 		for i, obj := range grp.ObjectList {
-			obj.Intersect(r, g, i)
+			obj.GetIntersect(r, g, i)
 		}
 	}
 
 	if r.interObj >= 0 {
-		matIndex := rg.Scene.GroupList[r.interGrp].ObjectList[r.interObj].Material()
+		obj := rg.Scene.GroupList[r.interGrp].ObjectList[r.interObj]
+		material := obj.GetMaterial()
 		interPoint := r.origin.Add(r.direction.Mul(r.interDist))
 		incidentV := interPoint.Sub(r.origin)
 		originBackV := r.direction.Mul(-1.0)
 		originBackV = originBackV.Normalize()
-		vNormal := rg.Scene.GroupList[r.interGrp].ObjectList[r.interObj].getNormal(interPoint)
+		vNormal := rg.Scene.GroupList[r.interGrp].ObjectList[r.interObj].GetNormal(interPoint)
 		for _, light := range rg.Scene.LightList {
 			switch light.Kind {
 			case "ambient":
@@ -133,18 +133,18 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 				NL := vNormal.Dot(lightDir)
 
 				if NL > 0.0 {
-					if rg.Scene.MaterialList[matIndex].DifuseCol > 0.0 { // ------- Difuso
-						difuseColor := light.Color.Mul(rg.Scene.MaterialList[matIndex].DifuseCol).Mul(NL)
-						difuseColor.R *= rg.Scene.MaterialList[matIndex].Color.R * shadow
-						difuseColor.G *= rg.Scene.MaterialList[matIndex].Color.G * shadow
-						difuseColor.B *= rg.Scene.MaterialList[matIndex].Color.B * shadow
+					if material.DifuseCol > 0.0 { // ------- Difuso
+						difuseColor := light.Color.Mul(material.DifuseCol).Mul(NL)
+						difuseColor.R *= r.interColor.R * shadow
+						difuseColor.G *= r.interColor.G * shadow
+						difuseColor.B *= r.interColor.B * shadow
 						c = c.Add(difuseColor)
 					}
-					if rg.Scene.MaterialList[matIndex].SpecularCol > 0.0 { // ----- Especular
+					if material.SpecularCol > 0.0 { // ----- Especular
 						R := (vNormal.Mul(2).Mul(NL)).Sub(lightDir)
 						spec := originBackV.Dot(R)
 						if spec > 0.0 {
-							spec = rg.Scene.MaterialList[matIndex].SpecularCol * math.Pow(spec, rg.Scene.MaterialList[matIndex].SpecularD)
+							spec = material.SpecularCol * math.Pow(spec, material.SpecularD)
 							specularColor := light.Color.Mul(spec).Mul(shadow)
 							c = c.Add(specularColor)
 						}
@@ -153,26 +153,26 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 			}
 		}
 		if depth < rg.Scene.TraceDepth {
-			if rg.Scene.MaterialList[matIndex].ReflectionCol > 0.0 { // -------- Reflexion
+			if material.ReflectionCol > 0.0 { // -------- Reflexion
 				T := originBackV.Dot(vNormal)
 				if T > 0.0 {
 					vDirRef := (vNormal.Mul(2).Mul(T)).Sub(originBackV)
 					vOffsetInter := interPoint.Add(vDirRef.Mul(SMALL))
 					rayoRef := NewRay(vOffsetInter, vDirRef)
-					c = c.Add(rg.trace(rayoRef, depth+1.0).Mul(rg.Scene.MaterialList[matIndex].ReflectionCol))
+					c = c.Add(rg.trace(rayoRef, depth+1.0).Mul(material.ReflectionCol))
 				}
 			}
-			if rg.Scene.MaterialList[matIndex].TransmitCol > 0.0 { // ---- Refraccion
+			if material.TransmitCol > 0.0 { // ---- Refraccion
 				RN := vNormal.Dot(incidentV.Mul(-1.0))
 				incidentV = incidentV.Normalize()
 				var n1, n2 float64
 				if vNormal.Dot(incidentV) > 0.0 {
 					vNormal = vNormal.Mul(-1.0)
 					RN = -RN
-					n1 = rg.Scene.MaterialList[matIndex].IOR
+					n1 = material.IOR
 					n2 = 1.0
 				} else {
-					n2 = rg.Scene.MaterialList[matIndex].IOR
+					n2 = material.IOR
 					n1 = 1.0
 				}
 				if n1 != 0.0 && n2 != 0.0 {
@@ -180,7 +180,7 @@ func (rg *RayGun) trace(r *Ray, depth int) (c Color) {
 					refactDirV := incidentV.Add(vNormal.Mul(RN).Mul(n1 / n2)).Sub(vNormal.Mul(par_sqrt))
 					vOffsetInter := interPoint.Add(refactDirV.Mul(SMALL))
 					refractRay := NewRay(vOffsetInter, refactDirV)
-					c = c.Add(rg.trace(refractRay, depth+1.0).Mul(rg.Scene.MaterialList[matIndex].TransmitCol))
+					c = c.Add(rg.trace(refractRay, depth+1.0).Mul(material.TransmitCol))
 				}
 			}
 		}

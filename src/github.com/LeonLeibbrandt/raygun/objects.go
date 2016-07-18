@@ -1,8 +1,6 @@
 package raygun
 
 import (
-	"bufio"
-	"fmt"
 	"math"
 )
 
@@ -18,34 +16,44 @@ type GroupBounds interface {
 
 // Object is the interface all primitives must have to exist in a raytracing scene.
 type Object interface {
-	Type() string
-	Material() int
+	GetType() string
+	GetMaterial() *Material
 	SetMaterial(int)
-	Intersect(r *Ray, g, i int) bool
-	getNormal(point *Vector) *Vector
-	Furthest(point *Vector) float64
-	Write(*bufio.Writer)
+	GetIntersect(r *Ray, g, i int) bool
+	GetNormal(point *Vector) *Vector
+	GetFurthest(point *Vector) float64
 }
 
 // Base has the default fields and method that is common to all primitives.
 type Base struct {
-	ObjectType    string
+	Scene         *Scene `json:"-"`
+	Type          string
 	MaterialIndex int
+	Material      *Material `json:"-"`
+}
+
+func NewBase(scn *Scene, objtype string, m int) Base {
+	return Base{
+		Scene:         scn,
+		Type:          objtype,
+		MaterialIndex: m,
+		Material:      scn.MaterialList[m],
+	}
 }
 
 // Type defines the type of the object, it is used when parsing a scene file.
-func (b *Base) Type() string {
-	return b.ObjectType
-}
-
-// Material return the index into the material list defined in the scene.
-func (b *Base) Material() int {
-	return b.MaterialIndex
+func (b *Base) GetType() string {
+	return b.Type
 }
 
 // SetMaterial set the material index to the supplied value.
 func (b *Base) SetMaterial(i int) {
 	b.MaterialIndex = i
+	b.Material = b.Scene.MaterialList[i]
+}
+
+func (b *Base) GetMaterial() *Material {
+	return b.Material
 }
 
 // Sphere is a sphere with position and radius
@@ -56,12 +64,9 @@ type Sphere struct {
 }
 
 // NewSphere creates a new sphere from the supplied values.
-func NewSphere(x, y, z, r float64, m int) *Sphere {
+func NewSphere(x, y, z, r float64, m int, scn *Scene) *Sphere {
 	return &Sphere{
-		Base: Base{
-			ObjectType:    "sphere",
-			MaterialIndex: m,
-		},
+		Base:     NewBase(scn, "sphere", m),
 		Position: &Vector{x, y, z},
 		Radius:   r,
 	}
@@ -87,7 +92,7 @@ func (e *Sphere) HitBounds(r *Ray) bool {
 }
 
 // Intersect calculates if the ray instersect this sphere and at what distance.
-func (e *Sphere) Intersect(r *Ray, g, i int) bool {
+func (e *Sphere) GetIntersect(r *Ray, g, i int) bool {
 	a := r.a // r.direction.Dot(r.direction)
 	X := r.origin.Sub(e.Position)
 	b := 2 * (r.direction.Dot(X))
@@ -118,118 +123,136 @@ func (e *Sphere) Intersect(r *Ray, g, i int) bool {
 	r.interDist = t
 	r.interObj = i
 	r.interGrp = g
+	r.interColor = e.Material.Color
 	return true
 }
 
-func (e *Sphere) getNormal(point *Vector) *Vector {
+func (e *Sphere) GetNormal(point *Vector) *Vector {
 	normal := point.Sub(e.Position)
 	return normal.Normalize()
 }
 
 // Furthest calculates the firhest distance this sphere can be from a the point.
 // This is used to calculate the group bounds if this sphere is a child of a group.
-func (e *Sphere) Furthest(point *Vector) float64 {
+func (e *Sphere) GetFurthest(point *Vector) float64 {
 	return e.Position.Sub(point).Module() + e.Radius
 }
 
-func (e *Sphere) Write(buffer *bufio.Writer) {
-	buffer.WriteString(fmt.Sprintf("raygun.NewSphere(%.2f, %.2f, %.2f, %.2f, %v),\n",
-		e.Position.X,
-		e.Position.Y,
-		e.Position.Z,
-		e.Radius,
-		e.Material()))
-}
-
 // Plane is a primitive that has a position and a normal.
-// It has been extended to be a disc - if Radius is set, or a finite plane if width, height
-// and depth are set. The nomal need not be along axis.
+// It has been extended to be a disc - if Radius is set
+// The planes horizontal is defined by the normal crossed with the scene Camera up, and the vertical
+// as the plane normal crossed with horizontal. This is then used as the horisontal and vertical length:
+// Horisontal = width
+// Vertical = Height
+// If Radius, Width and Height are zero then it is an infinite plane.
+
 type Plane struct {
 	Base
 	Position   *Vector
 	Normal     *Vector
+	Horiz      *Vector `json:"-"`
+	Vert       *Vector `json:"-"`
 	Radius     float64
 	Width      float64 // Only two of these will be used for plane, the one in the "normal" direction MUST be 0.0
 	Height     float64
-	Depth      float64
-	HalfWidth  float64
-	HalfHeight float64
-	HalfDepth  float64
+	halfWidth  float64 `json:"-"`
+	halfHeight float64 `json:"-"`
 }
 
-func NewPlane(xp, yp, zp, xn, yn, zn, r, w, h, d float64, m int) *Plane {
+func NewPlane(xp, yp, zp, xn, yn, zn, r, w, h float64, m int, scn *Scene) *Plane {
 	p := &Plane{
-		Base: Base{
-			ObjectType:    "plane",
-			MaterialIndex: m,
-		},
+		Base:       NewBase(scn, "plane", m),
 		Position:   &Vector{xp, yp, zp},
 		Normal:     (&Vector{xn, yn, zn}).Normalize(),
 		Radius:     r,
 		Width:      w,
 		Height:     h,
-		Depth:      d,
-		HalfWidth:  w / 2.0,
-		HalfHeight: h / 2.0,
-		HalfDepth:  d / 2.0,
+		halfWidth:  (w / 2.0),
+		halfHeight: (h / 2.0),
 	}
+
+	p.Horiz = p.Normal.Cross(scn.CameraUp).Normalize()
+	if p.Horiz.Module() == 0.0 {
+		p.Horiz = p.Normal.Cross(&Vector{0.0, -1.0, 0.0}).Normalize()
+	}
+
+	p.Vert = p.Normal.Cross(p.Horiz).Normalize()
 
 	return p
 }
 
 func (p *Plane) HitBounds(r *Ray) bool {
-
 	v := p.Normal.Dot(r.direction)
 	if v == 0 {
 		return false
 	}
-	t := p.Normal.Dot(p.Position.Sub(r.origin)) / v
-	if t < 0.0 {
-		return false
-	}
 
-	interPoint := r.origin.Add(r.direction.Mul(t))
-	if p.HalfWidth > 0.0 && (interPoint.X < p.Position.X-p.HalfWidth || interPoint.X > p.Position.X+p.HalfWidth) {
-		return false
-	}
-
-	if p.HalfHeight > 0.0 && (interPoint.Y < p.Position.Y-p.HalfHeight || interPoint.Y > p.Position.Y+p.HalfHeight) {
-		return false
-	}
-
-	if p.HalfDepth > 0.0 && (interPoint.Z < p.Position.Z-p.HalfDepth || interPoint.Z > p.Position.Z+p.HalfDepth) {
-		return false
-	}
-
-	return true
-}
-
-func (p *Plane) Intersect(r *Ray, g, i int) bool {
-	v := p.Normal.Dot(r.direction)
-	if v == 0 {
-		return false
-	}
 	t := p.Normal.Dot(p.Position.Sub(r.origin)) / v
 	if t < 0.0 || t > r.interDist {
 		return false
 	}
+
+	interPoint := r.origin.Add(r.direction.Mul(t))
+
+	u := interPoint.Sub(p.Position)
+
 	if p.Radius > 0.0 {
 		// We have a disc
-		interPoint := r.origin.Add(r.direction.Mul(t))
-		dist := interPoint.Sub(p.Position).Module()
-		if dist > p.Radius {
+		if u.Module() > p.Radius {
+			return false
+		}
+		r.interColor = p.Material.Color
+	} else {
+		if math.Abs(u.Dot(p.Horiz)) > p.halfWidth {
+			return false
+		}
+
+		if math.Abs(u.Dot(p.Vert)) > p.halfHeight {
 			return false
 		}
 	}
+	return true
+}
 
-	if p.Width > 0.0 {
-		// We have a finite plane
-		interPoint := r.origin.Add(r.direction.Mul(t))
-		if interPoint.X < p.Position.X-p.HalfWidth || interPoint.X > p.Position.X+p.HalfWidth ||
-			interPoint.Y < p.Position.Y-p.HalfHeight || interPoint.Y > p.Position.Y+p.HalfHeight ||
-			interPoint.Z < p.Position.Z-p.HalfDepth || interPoint.Z > p.Position.Z+p.HalfDepth {
+func (p *Plane) GetIntersect(r *Ray, g, i int) bool {
+	v := p.Normal.Dot(r.direction)
+	if v == 0 {
+		return false
+	}
+
+	t := p.Normal.Dot(p.Position.Sub(r.origin)) / v
+	if t < 0.0 || t > r.interDist {
+		return false
+	}
+
+	interPoint := r.origin.Add(r.direction.Mul(t))
+
+	u := interPoint.Sub(p.Position)
+
+	if p.Radius > 0.0 {
+		// We have a disc
+		if u.Module() > p.Radius {
 			return false
 		}
+		r.interColor = p.Material.Color
+	} else {
+		horiz := u.Dot(p.Horiz)
+		if math.Abs(horiz) > p.halfWidth {
+			return false
+		}
+		imgx := p.halfWidth + horiz
+
+		vert := u.Dot(p.Vert)
+		if math.Abs(vert) > p.halfHeight {
+			return false
+		}
+		imgy := p.halfHeight + vert
+		color, hasColor := p.getColor((p.Width-imgx)/p.Width, imgy/p.Height)
+		if !hasColor {
+			return false
+		}
+		r.interColor = color
+
 	}
 
 	r.interDist = t
@@ -239,29 +262,37 @@ func (p *Plane) Intersect(r *Ray, g, i int) bool {
 
 }
 
-func (p *Plane) getNormal(point *Vector) *Vector {
+func (p *Plane) GetNormal(point *Vector) *Vector {
 	return p.Normal
 }
 
-func (p *Plane) Furthest(point *Vector) float64 {
-	return p.Position.Sub(point).Module() + p.Radius + p.Width/2.0
+func (p *Plane) GetFurthest(point *Vector) float64 {
+	dist := p.Position.Sub(point).Module()
+	if p.Radius > 0.0 {
+		return dist + p.Radius
+	}
+	return dist + math.Sqrt(p.halfWidth*p.halfWidth+p.halfHeight*p.halfHeight)
 }
 
-// func (p *Plane) String() string {
-// 	return fmt.Sprintf("<Pla: %d %s %.2f>", p.Material, p.Normal.String(), p.Radius)
-// }
-
-func (p *Plane) Write(buffer *bufio.Writer) {
-	buffer.WriteString(fmt.Sprintf("raygun.NewPlane(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
-		p.Position.X,
-		p.Position.Y,
-		p.Position.Z,
-		p.Normal.X,
-		p.Normal.Y,
-		p.Normal.Z,
-		p.Radius,
-		p.Width,
-		p.Material()))
+func (p *Plane) getColor(x, y float64) (Color, bool) {
+	mat := p.Material
+	if mat.Image != nil {
+		bounds := mat.Image.Bounds()
+		imgx := x*float64(bounds.Max.X-bounds.Min.X) + float64(bounds.Min.X)
+		imgy := y*float64(bounds.Max.Y-bounds.Min.Y) + float64(bounds.Min.Y)
+		col := mat.Image.At(int(imgx), int(imgy))
+		r, g, b, a := col.RGBA()
+		fr := float64(r)
+		fg := float64(g)
+		fb := float64(b)
+		fa := float64(a)
+		if a == 0x0000 {
+			return p.Material.Color, false
+		} else {
+			return Color{fr / fa, fg / fa, fb / fa}, true // FromColor(mat.Image.At(int(imgx), int(imgy)))
+		}
+	}
+	return p.Material.Color, true
 }
 
 // Cube
@@ -272,16 +303,13 @@ type Cube struct {
 	Width    float64
 	Height   float64
 	Depth    float64
-	Min      *Vector
-	Max      *Vector
+	Min      *Vector `json:"-"`
+	Max      *Vector `json:"-"`
 }
 
-func NewCube(x, y, z, w, h, d float64, m int) *Cube {
+func NewCube(x, y, z, w, h, d float64, m int, scn *Scene) *Cube {
 	c := &Cube{
-		Base: Base{
-			ObjectType:    "cube",
-			MaterialIndex: m,
-		},
+		Base:     NewBase(scn, "cube", m),
 		Position: &Vector{x, y, z},
 		Width:    w, // x direction
 		Height:   h, // y direction
@@ -291,7 +319,7 @@ func NewCube(x, y, z, w, h, d float64, m int) *Cube {
 	return c
 }
 
-func (c *Cube) Intersect(r *Ray, g, i int) bool {
+func (c *Cube) GetIntersect(r *Ray, g, i int) bool {
 	n := c.Min.Sub(r.origin).Div(r.direction)
 	f := c.Max.Sub(r.origin).Div(r.direction)
 	n, f = n.Min(f), n.Max(f)
@@ -304,12 +332,13 @@ func (c *Cube) Intersect(r *Ray, g, i int) bool {
 		r.interDist = t0
 		r.interObj = i
 		r.interGrp = g
+		r.interColor = c.Material.Color
 		return true
 	}
 	return false
 }
 
-func (c *Cube) getNormal(point *Vector) *Vector {
+func (c *Cube) GetNormal(point *Vector) *Vector {
 
 	switch {
 	case point.X < c.Min.X+EPS:
@@ -341,21 +370,9 @@ func (c *Cube) initMinMax() {
 	}
 }
 
-func (c *Cube) Furthest(point *Vector) float64 {
+func (c *Cube) GetFurthest(point *Vector) float64 {
 	max := math.Max(math.Max(c.Width/2.0, c.Height/2.), c.Depth)
 	return c.Position.Sub(point).Module() + 1.5*max
-}
-
-func (c *Cube) Write(buffer *bufio.Writer) {
-	buffer.WriteString(fmt.Sprintf("raygun.NewCube(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
-		c.Position.X,
-		c.Position.Y,
-		c.Position.Z,
-		c.Width,
-		c.Height,
-		c.Depth,
-		c.Material(),
-	))
 }
 
 type Cylinder struct {
@@ -364,16 +381,13 @@ type Cylinder struct {
 	Direction *Vector
 	Length    float64
 	Radius    float64
-	StartDisc *Plane
-	EndDisc   *Plane
+	StartDisc *Plane `json:"-"`
+	EndDisc   *Plane `json:"-"`
 }
 
-func NewCylinder(xp, yp, zp, xd, yd, zd, l, r float64, m int) *Cylinder {
+func NewCylinder(xp, yp, zp, xd, yd, zd, l, r float64, m int, scn *Scene) *Cylinder {
 	c := &Cylinder{
-		Base: Base{
-			ObjectType:    "cylinder",
-			MaterialIndex: m,
-		},
+		Base:      NewBase(scn, "cylinder", m),
 		Position:  &Vector{xp, yp, zp},
 		Direction: (&Vector{xd, yd, zd}).Normalize(),
 		Length:    l,
@@ -381,16 +395,16 @@ func NewCylinder(xp, yp, zp, xd, yd, zd, l, r float64, m int) *Cylinder {
 	}
 	pos := c.Position
 	dir := c.Direction.Mul(-1)
-	c.StartDisc = NewPlane(pos.X, pos.Y, pos.Z, dir.X, dir.Y, dir.Z, c.Radius, 0.0, 0.0, 0.0, c.Material())
+	c.StartDisc = NewPlane(pos.X, pos.Y, pos.Z, dir.X, dir.Y, dir.Z, c.Radius, 0.0, 0.0, c.MaterialIndex, c.Scene)
 
 	pos = c.Position.Add(c.Direction.Mul(c.Length))
 	dir = c.Direction
-	c.EndDisc = NewPlane(pos.X, pos.Y, pos.Z, dir.X, dir.Y, dir.Z, c.Radius, 0.0, 0.0, 0.0, c.Material())
+	c.EndDisc = NewPlane(pos.X, pos.Y, pos.Z, dir.X, dir.Y, dir.Z, c.Radius, 0.0, 0.0, c.MaterialIndex, c.Scene)
 	return c
 }
 
 // http://blog.makingartstudios.com/?p=286
-func (y *Cylinder) Intersect(r *Ray, g, i int) bool {
+func (y *Cylinder) GetIntersect(r *Ray, g, i int) bool {
 	cylend := y.Position.Add(y.Direction.Mul(y.Length))
 	AB := cylend.Sub(y.Position)
 	AO := r.origin.Sub(y.Position)
@@ -462,37 +476,24 @@ func (y *Cylinder) Intersect(r *Ray, g, i int) bool {
 	r.interDist = t
 	r.interObj = i
 	r.interGrp = g
+	r.interColor = y.Material.Color
 	return true
 
 }
 func (y *Cylinder) intersectCap(r *Ray, start bool) bool {
 	if start {
-		return y.StartDisc.Intersect(r, 0, 0)
+		return y.StartDisc.GetIntersect(r, 0, 0)
 	}
-	return y.EndDisc.Intersect(r, 0, 0)
+	return y.EndDisc.GetIntersect(r, 0, 0)
 }
 
-func (y *Cylinder) getNormal(point *Vector) *Vector {
+func (y *Cylinder) GetNormal(point *Vector) *Vector {
 	PQ := point.Sub(y.Position)
 	pqa := PQ.Dot(y.Direction)
 	PQAA := y.Direction.Mul(pqa)
 	return PQ.Sub(PQAA).Normalize()
 }
 
-func (y *Cylinder) Furthest(point *Vector) float64 {
+func (y *Cylinder) GetFurthest(point *Vector) float64 {
 	return y.Position.Sub(point).Module() + y.Length + y.Radius
-}
-
-func (y *Cylinder) Write(buffer *bufio.Writer) {
-	buffer.WriteString(fmt.Sprintf("raygun.NewCylinder(%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %v),\n",
-		y.Position.X,
-		y.Position.Y,
-		y.Position.Z,
-		y.Direction.X,
-		y.Direction.Y,
-		y.Direction.Z,
-		y.Length,
-		y.Radius,
-		y.Material(),
-	))
 }

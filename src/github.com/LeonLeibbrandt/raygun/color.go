@@ -27,3 +27,12 @@ func (c Color) ToPixel() color.RGBA {
 	c.B = math.Max(0.0, math.Min(c.B*255.0, 255.0))
 	return color.RGBA{uint8(c.R), uint8(c.G), uint8(c.B), 255}
 }
+
+func FromColor(col color.Color) Color {
+	c := Color{}
+	r,g,b,_ := col.RGBA()
+	c.R = float64(r)
+	c.G = float64(g)
+	c.B = float64(b)
+	return c
+}

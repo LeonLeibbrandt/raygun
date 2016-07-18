@@ -1,6 +1,7 @@
 package main
 
 import (
+	//	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/LeonLeibbrandt/raygun"
@@ -26,5 +27,12 @@ func main() {
 		panic(err)
 	}
 
+	/*
+		jsonfile := *scenefile + ".json"
+		buf, _ := json.MarshalIndent(rg.Scene, "", "\t")
+		file, _ := os.Create(jsonfile)
+		file.Write(buf)
+		file.Close()
+	*/
 	rg.Render()
 }

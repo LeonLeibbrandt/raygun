@@ -1,7 +1,4 @@
 pkg
 bin
 *~
-scenes/*.png
-scenes/*.jpg
-scenes/*.go
-scenes/site.txt
+scenes/

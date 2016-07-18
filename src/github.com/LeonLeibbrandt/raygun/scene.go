@@ -21,20 +21,20 @@ type Scene struct {
 	VisionField  float64
 	StartLine    int
 	EndLine      int
-	GridWidth    int
-	GridHeight   int
+	GridWidth    int `json:"-"`
+	GridHeight   int `json:"-"`
 	CameraPos    *Vector
 	CameraLook   *Vector
 	CameraUp     *Vector
-	Look         *Vector
-	Vhor         *Vector
-	Vver         *Vector
-	Vp           *Vector
+	Look         *Vector `json:"-"`
+	Vhor         *Vector `json:"-"`
+	Vver         *Vector `json:"-"`
+	Vp           *Vector `json:"-"`
 	CalcShadow   bool
-	Image        *image.RGBA
+	Image        *image.RGBA `json:"-"`
 	GroupList    []*Group
 	LightList    []Light
-	MaterialList []Material
+	MaterialList []*Material
 }
 
 func NewScene(sceneFilename string) *Scene {
@@ -117,8 +117,7 @@ func (scn *Scene) parseStream(r *bufio.Reader) {
 		rad, _ := strconv.ParseFloat(data[7], 64)
 		wid, _ := strconv.ParseFloat(data[8], 64)
 		hei, _ := strconv.ParseFloat(data[9], 64)
-		dep, _ := strconv.ParseFloat(data[10], 64)
-		return NewPlane(pos.X, pos.Y, pos.Z, nor.X, nor.Y, nor.Z, rad, wid, hei, dep, mat)
+		return NewPlane(pos.X, pos.Y, pos.Z, nor.X, nor.Y, nor.Z, rad, wid, hei, mat, scn)
 	}
 
 	for err == nil && !isPrefix {
@@ -186,7 +185,7 @@ func (scn *Scene) parseStream(r *bufio.Reader) {
 			if data[4] == "false" {
 				always = false
 			}
-			grp := NewGroup(data[0], pos.X, pos.Y, pos.Z, always)
+			grp := NewGroup(data[0], pos.X, pos.Y, pos.Z, always, scn)
 			grp.Bounds = plane
 			scn.GroupList = append(scn.GroupList, grp)
 			groupIndex = groupIndex + 1
@@ -197,7 +196,7 @@ func (scn *Scene) parseStream(r *bufio.Reader) {
 			rad, _ := strconv.ParseFloat(data[4], 64)
 
 			scn.GroupList[groupIndex].ObjectList = append(scn.GroupList[groupIndex].ObjectList,
-				NewSphere(pos.X, pos.Y, pos.Z, rad, mat))
+				NewSphere(pos.X, pos.Y, pos.Z, rad, mat, scn))
 
 		case "plane":
 			scn.GroupList[groupIndex].ObjectList = append(scn.GroupList[groupIndex].ObjectList,
@@ -210,7 +209,7 @@ func (scn *Scene) parseStream(r *bufio.Reader) {
 			height, _ := strconv.ParseFloat(data[5], 64)
 			depth, _ := strconv.ParseFloat(data[6], 64)
 			scn.GroupList[groupIndex].ObjectList = append(scn.GroupList[groupIndex].ObjectList,
-				NewCube(pos.X, pos.Y, pos.Z, width, height, depth, mat))
+				NewCube(pos.X, pos.Y, pos.Z, width, height, depth, mat, scn))
 
 		case "cylinder":
 			mat, _ := strconv.Atoi(data[0])
@@ -219,7 +218,7 @@ func (scn *Scene) parseStream(r *bufio.Reader) {
 			len, _ := strconv.ParseFloat(data[7], 64)
 			rad, _ := strconv.ParseFloat(data[8], 64)
 			scn.GroupList[groupIndex].ObjectList = append(scn.GroupList[groupIndex].ObjectList,
-				NewCylinder(pos.X, pos.Y, pos.Z, dir.X, dir.Y, dir.Z, len, rad, mat))
+				NewCylinder(pos.X, pos.Y, pos.Z, dir.X, dir.Y, dir.Z, len, rad, mat, scn))
 
 		case "light":
 			light := Light{ParseVector(data[0:3]), ParseColor(data[3:6]), data[6]}
@@ -303,10 +302,15 @@ func ParseColor(line []string) Color {
 	return Color{r, g, b}
 }
 
-func ParseMaterial(line []string) Material {
+func ParseMaterial(line []string) *Material {
 	var f [6]float64
-	for i, item := range line[3:] {
+	for i, item := range line[3:8] {
 		f[i], _ = strconv.ParseFloat(item, 64)
 	}
-	return Material{ParseColor(line[0:3]), f[0], f[1], f[2], f[3], f[4], f[5]}
+	fn := ""
+	if len(line) == 10 {
+		fn = line[9]
+	}
+	m, _ := NewMaterial(ParseColor(line[0:3]), f[0], f[1], f[2], f[3], f[4], f[5], fn)
+	return m
 }
