@@ -202,6 +202,15 @@ func (scn *Scene) parseStream(r *bufio.Reader) {
 			scn.GroupList[groupIndex].ObjectList = append(scn.GroupList[groupIndex].ObjectList,
 				newplane(data))
 
+		case "texture":
+			pos := ParseVector(data[0:3])
+			nor := ParseVector(data[3:6])
+			wid, _ := strconv.ParseFloat(data[6], 64)
+			hei, _ := strconv.ParseFloat(data[7], 64)
+			fn := data[8]
+			scn.GroupList[groupIndex].ObjectList = append(scn.GroupList[groupIndex].ObjectList,
+				NewTexture(pos.X, pos.Y, pos.Z, nor.X, nor.Y, nor.Z, wid, hei, fn, scn))
+
 		case "cube":
 			mat, _ := strconv.Atoi(data[0])
 			pos := ParseVector(data[1:4])
@@ -307,10 +316,6 @@ func ParseMaterial(line []string) *Material {
 	for i, item := range line[3:8] {
 		f[i], _ = strconv.ParseFloat(item, 64)
 	}
-	fn := ""
-	if len(line) == 10 {
-		fn = line[9]
-	}
-	m, _ := NewMaterial(ParseColor(line[0:3]), f[0], f[1], f[2], f[3], f[4], f[5], fn)
+	m, _ := NewMaterial(ParseColor(line[0:3]), f[0], f[1], f[2], f[3], f[4], f[5])
 	return m
 }

@@ -1,7 +1,11 @@
 package raygun
 
 import (
+	"fmt"
+	"image"
+	"image/png"
 	"math"
+	"os"
 )
 
 // EPS is used for the nuances of comparing float values.
@@ -201,7 +205,6 @@ func (p *Plane) HitBounds(r *Ray) bool {
 		if u.Module() > p.Radius {
 			return false
 		}
-		r.interColor = p.Material.Color
 	} else {
 		if math.Abs(u.Dot(p.Horiz)) > p.halfWidth {
 			return false
@@ -234,27 +237,17 @@ func (p *Plane) GetIntersect(r *Ray, g, i int) bool {
 		if u.Module() > p.Radius {
 			return false
 		}
-		r.interColor = p.Material.Color
 	} else {
 		horiz := u.Dot(p.Horiz)
 		if math.Abs(horiz) > p.halfWidth {
 			return false
 		}
-		imgx := p.halfWidth + horiz
-
 		vert := u.Dot(p.Vert)
 		if math.Abs(vert) > p.halfHeight {
 			return false
 		}
-		imgy := p.halfHeight + vert
-		color, hasColor := p.getColor((p.Width-imgx)/p.Width, imgy/p.Height)
-		if !hasColor {
-			return false
-		}
-		r.interColor = color
-
 	}
-
+	r.interColor = p.Material.Color
 	r.interDist = t
 	r.interObj = i
 	r.interGrp = g
@@ -274,25 +267,158 @@ func (p *Plane) GetFurthest(point *Vector) float64 {
 	return dist + math.Sqrt(p.halfWidth*p.halfWidth+p.halfHeight*p.halfHeight)
 }
 
-func (p *Plane) getColor(x, y float64) (Color, bool) {
-	mat := p.Material
-	if mat.Image != nil {
-		bounds := mat.Image.Bounds()
-		imgx := x*float64(bounds.Max.X-bounds.Min.X) + float64(bounds.Min.X)
-		imgy := y*float64(bounds.Max.Y-bounds.Min.Y) + float64(bounds.Min.Y)
-		col := mat.Image.At(int(imgx), int(imgy))
-		r, g, b, a := col.RGBA()
-		fr := float64(r)
-		fg := float64(g)
-		fb := float64(b)
-		fa := float64(a)
-		if a == 0x0000 {
-			return p.Material.Color, false
-		} else {
-			return Color{fr / fa, fg / fa, fb / fa}, true // FromColor(mat.Image.At(int(imgx), int(imgy)))
+// Texture
+type Texture struct {
+	Scene      *Scene
+	Type       string
+	Material   *Material
+	Position   *Vector
+	Normal     *Vector
+	Horiz      *Vector `json:"-"`
+	Vert       *Vector `json:"-"`
+	Width      float64 // Only two of these will be used for plane, the one in the "normal" direction MUST be 0.0
+	Height     float64
+	halfWidth  float64 `json:"-"`
+	halfHeight float64 `json:"-"`
+	Image      image.Image
+}
+
+func NewTexture(xp, yp, zp, xn, yn, zn, w, h float64, filename string, scn *Scene) *Texture {
+	mat, _ := NewMaterial(Color{1.0, 1.0, 1.0}, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+	t := &Texture{
+		Scene:      scn,
+		Type:       "texture",
+		Material:   mat,
+		Position:   &Vector{xp, yp, zp},
+		Normal:     (&Vector{xn, yn, zn}).Normalize(),
+		Width:      w,
+		Height:     h,
+		halfWidth:  (w / 2.0),
+		halfHeight: (h / 2.0),
+		Image:      nil,
+	}
+
+	if filename != "" {
+		f, err := os.Open(filename)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+			return nil
+		}
+		defer f.Close()
+		t.Image, err = png.Decode(f)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+			return nil
 		}
 	}
-	return p.Material.Color, true
+
+	t.Horiz = t.Normal.Cross(scn.CameraUp).Normalize()
+	if t.Horiz.Module() == 0.0 {
+		t.Horiz = t.Normal.Cross(&Vector{0.0, -1.0, 0.0}).Normalize()
+	}
+	t.Vert = t.Normal.Cross(t.Horiz).Normalize()
+
+	return t
+}
+
+func (t *Texture) GetType() string {
+	return t.Type
+}
+
+func (t *Texture) GetMaterial() *Material {
+	return t.Material
+}
+
+func (t *Texture) SetMaterial(i int) {
+}
+
+func (t *Texture) HitBounds(r *Ray) bool {
+	v := t.Normal.Dot(r.direction)
+	if v == 0 {
+		return false
+	}
+
+	w := t.Normal.Dot(t.Position.Sub(r.origin)) / v
+	if w < 0.0 || w > r.interDist {
+		return false
+	}
+
+	interPoint := r.origin.Add(r.direction.Mul(w))
+
+	u := interPoint.Sub(t.Position)
+
+	if math.Abs(u.Dot(t.Horiz)) > t.halfWidth {
+		return false
+	}
+
+	if math.Abs(u.Dot(t.Vert)) > t.halfHeight {
+		return false
+	}
+	return true
+}
+
+func (t *Texture) GetIntersect(r *Ray, g, i int) bool {
+	v := t.Normal.Dot(r.direction)
+	if v == 0 {
+		return false
+	}
+
+	w := t.Normal.Dot(t.Position.Sub(r.origin)) / v
+	if w < 0.0 || w > r.interDist {
+		return false
+	}
+
+	interPoint := r.origin.Add(r.direction.Mul(w))
+
+	u := interPoint.Sub(t.Position)
+
+	horiz := u.Dot(t.Horiz)
+	if math.Abs(horiz) > t.halfWidth {
+		return false
+	}
+	imgx := t.halfWidth + horiz
+
+	vert := u.Dot(t.Vert)
+	if math.Abs(vert) > t.halfHeight {
+		return false
+	}
+	imgy := t.halfHeight + vert
+	color, hasColor := t.getColor((t.Width-imgx)/t.Width, imgy/t.Height)
+	if !hasColor {
+		return false
+	}
+
+	r.interColor = color
+	r.interDist = w
+	r.interObj = i
+	r.interGrp = g
+	return true
+
+}
+
+func (t *Texture) GetNormal(point *Vector) *Vector {
+	return t.Normal
+}
+
+func (t *Texture) GetFurthest(point *Vector) float64 {
+	dist := t.Position.Sub(point).Module()
+	return dist + math.Sqrt(t.halfWidth*t.halfWidth+t.halfHeight*t.halfHeight)
+}
+
+func (t *Texture) getColor(x, y float64) (Color, bool) {
+	bounds := t.Image.Bounds()
+	imgx := x*float64(bounds.Max.X-bounds.Min.X) + float64(bounds.Min.X)
+	imgy := y*float64(bounds.Max.Y-bounds.Min.Y) + float64(bounds.Min.Y)
+	col := t.Image.At(int(imgx), int(imgy))
+	r, g, b, a := col.RGBA()
+	fr := float64(r)
+	fg := float64(g)
+	fb := float64(b)
+	fa := float64(a)
+	if a == 0x0000 {
+		return Color{fr / fa, fg / fa, fb / fa}, false
+	}
+	return Color{fr / fa, fg / fa, fb / fa}, true // FromColor(mat.Image.At(int(imgx), int(imgy)))
 }
 
 // Cube

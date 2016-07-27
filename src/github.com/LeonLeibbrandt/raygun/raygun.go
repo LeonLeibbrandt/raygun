@@ -202,7 +202,7 @@ func (rg *RayGun) renderPixel(line chan int, done chan bool) {
 					dir.Z = float64(xo)*rg.Scene.Vhor.Z + float64(yo)*rg.Scene.Vver.Z + rg.Scene.Vp.Z
 					dir = dir.Normalize()
 					r := NewRay(rg.Scene.CameraPos, dir)
-					c = c.Add(rg.trace(r, 1.0))
+					c = c.Add(rg.trace(r, 1))
 					yo += 1
 				}
 				xo += 1
