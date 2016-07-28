@@ -147,7 +147,7 @@ func (scn *Scene) AddGroup(group string) *Group {
 }
 
 func (scn *Scene) parseStream(r *bufio.Reader) {
-	groupIndex := -1
+	groupIndex := len(scn.GroupList) - 1
 	line, isPrefix, err := r.ReadLine()
 
 	newplane := func(data []string) *Plane {
@@ -228,7 +228,7 @@ func (scn *Scene) parseStream(r *bufio.Reader) {
 			grp := NewGroup(data[0], pos.X, pos.Y, pos.Z, always, scn)
 			grp.Bounds = plane
 			scn.GroupList = append(scn.GroupList, grp)
-			groupIndex = groupIndex + 1
+			groupIndex = len(scn.GroupList) - 1
 
 		case "sphere":
 			mat, _ := strconv.Atoi(data[0])
