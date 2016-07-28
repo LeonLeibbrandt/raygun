@@ -35,12 +35,37 @@ type Scene struct {
 	GroupList    []*Group
 	LightList    []Light
 	MaterialList []*Material
+	ImageList    map[string]image.Image
 }
 
-func NewScene(sceneFilename string) *Scene {
+func NewScene() *Scene {
 	scn := &Scene{}
-	// defaults
+
 	scn.GroupList = make([]*Group, 0)
+	scn.LightList = make([]Light, 0)
+	scn.MaterialList = make([]*Material, 0)
+	scn.ImageList = make(map[string]image.Image, 0)
+
+	// defaults
+	scn.ImgWidth = 320
+	scn.ImgHeight = 200
+
+	scn.TraceDepth = 3   // bounces
+	scn.OverSampling = 1 // no OverSampling
+	scn.VisionField = 60
+	scn.CalcShadow = true
+	return scn
+}
+
+func NewSceneFromFile(sceneFilename string) *Scene {
+	scn := &Scene{}
+
+	scn.GroupList = make([]*Group, 0)
+	scn.LightList = make([]Light, 0)
+	scn.MaterialList = make([]*Material, 0)
+	scn.ImageList = make(map[string]image.Image, 0)
+
+	// defaults
 	scn.ImgWidth = 320
 	scn.ImgHeight = 200
 
@@ -82,6 +107,11 @@ func NewSceneFromParams(imgWidth, imgHeight, traceDepth, overSampling int,
 		CameraUp:     cameraUp,
 	}
 
+	scn.GroupList = make([]*Group, 0)
+	scn.LightList = make([]Light, 0)
+	scn.MaterialList = make([]*Material, 0)
+	scn.ImageList = make(map[string]image.Image, 0)
+
 	scn.Init()
 
 	return scn
@@ -89,6 +119,10 @@ func NewSceneFromParams(imgWidth, imgHeight, traceDepth, overSampling int,
 
 func NewSceneFromText(text string) *Scene {
 	scn := &Scene{}
+	scn.GroupList = make([]*Group, 0)
+	scn.LightList = make([]Light, 0)
+	scn.MaterialList = make([]*Material, 0)
+	scn.ImageList = make(map[string]image.Image, 0)
 	// defaults
 	scn.GroupList = make([]*Group, 0)
 	scn.ImgWidth = 320
@@ -104,6 +138,12 @@ func NewSceneFromText(text string) *Scene {
 	scn.Init()
 	scn.CalcBounds()
 	return scn
+}
+
+func (scn *Scene) AddGroup(group string) *Group {
+	r := bufio.NewReader(strings.NewReader(group))
+	scn.parseStream(r)
+	return scn.GroupList[len(scn.GroupList)-1]
 }
 
 func (scn *Scene) parseStream(r *bufio.Reader) {

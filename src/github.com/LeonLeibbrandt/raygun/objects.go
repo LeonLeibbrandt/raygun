@@ -1,7 +1,6 @@
 package raygun
 
 import (
-	"fmt"
 	"image"
 	"image/png"
 	"math"
@@ -280,7 +279,8 @@ type Texture struct {
 	Height     float64
 	halfWidth  float64 `json:"-"`
 	halfHeight float64 `json:"-"`
-	Image      image.Image
+	ImageName  string
+	Image      image.Image `json:"-"`
 }
 
 func NewTexture(xp, yp, zp, xn, yn, zn, w, h float64, filename string, scn *Scene) *Texture {
@@ -295,20 +295,20 @@ func NewTexture(xp, yp, zp, xn, yn, zn, w, h float64, filename string, scn *Scen
 		Height:     h,
 		halfWidth:  (w / 2.0),
 		halfHeight: (h / 2.0),
+		ImageName:  filename,
 		Image:      nil,
 	}
-
 	if filename != "" {
 		f, err := os.Open(filename)
 		if err != nil {
-			fmt.Printf("%v\n", err)
-			return nil
-		}
-		defer f.Close()
-		t.Image, err = png.Decode(f)
-		if err != nil {
-			fmt.Printf("%v\n", err)
-			return nil
+			// if not a file then an index into the scenes image list
+			t.Image = scn.ImageList[filename]
+		} else {
+			defer f.Close()
+			t.Image, err = png.Decode(f)
+			if err != nil {
+				return nil
+			}
 		}
 	}
 

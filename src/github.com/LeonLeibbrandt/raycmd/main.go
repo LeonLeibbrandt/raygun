@@ -1,6 +1,7 @@
 package main
 
 import (
+	"image/png"
 	//	"encoding/json"
 	"flag"
 	"fmt"
@@ -35,4 +36,16 @@ func main() {
 		file.Close()
 	*/
 	rg.Render()
+
+	output, err := os.Create(scenefile + ".png")
+	if err != nil {
+		panic(err)
+	}
+	defer output.Close()
+	
+	err = png.Encode(output, rg.Scene.Image)
+	if err != nil {
+		panic(err)
+	}
+
 }

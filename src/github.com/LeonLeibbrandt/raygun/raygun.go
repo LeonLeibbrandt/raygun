@@ -3,7 +3,7 @@ package raygun
 import (
 	"bytes"
 	"fmt"
-	"image/png"
+	// "image/png"
 	"io/ioutil"
 	"math"
 	"os"
@@ -28,7 +28,7 @@ func NewRayGun(filename string, numworkers int) (*RayGun, error) {
 	rg := &RayGun{
 		FileName:   filename,
 		NumWorkers: numworkers,
-		Scene:      NewScene(filename),
+		Scene:      NewSceneFromFile(filename),
 		Done:       make(chan bool, numworkers),
 		Line:       make(chan int),
 	}
@@ -64,16 +64,17 @@ func (rg *RayGun) Render() {
 	for i := 0; i < rg.NumWorkers; i++ {
 		<-rg.Done
 	}
-	output, err := os.Create(rg.FileName + ".png")
-	if err != nil {
-		panic(err)
-	}
+	/*
+		output, err := os.Create(rg.FileName + ".png")
+		if err != nil {
+			panic(err)
+		}
 
-	err = png.Encode(output, rg.Scene.Image)
-	if err != nil {
-		panic(err)
-	}
-
+		err = png.Encode(output, rg.Scene.Image)
+		if err != nil {
+			panic(err)
+		}
+	*/
 	elapsed := time.Since(start)
 	fmt.Printf("\nTime %s for %v objects\n", elapsed, rg.Scene.ObjectCount())
 }
