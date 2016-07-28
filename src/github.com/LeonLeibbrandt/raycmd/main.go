@@ -37,7 +37,7 @@ func main() {
 	*/
 	rg.Render()
 
-	output, err := os.Create(scenefile + ".png")
+	output, err := os.Create(*scenefile + ".png")
 	if err != nil {
 		panic(err)
 	}

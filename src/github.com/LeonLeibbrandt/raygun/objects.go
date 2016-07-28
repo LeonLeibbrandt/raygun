@@ -5,6 +5,7 @@ import (
 	"image/png"
 	"math"
 	"os"
+	"strings"
 )
 
 // EPS is used for the nuances of comparing float values.
@@ -299,16 +300,19 @@ func NewTexture(xp, yp, zp, xn, yn, zn, w, h float64, filename string, scn *Scen
 		Image:      nil,
 	}
 	if filename != "" {
-		f, err := os.Open(filename)
-		if err != nil {
-			// if not a file then an index into the scenes image list
-			t.Image = scn.ImageList[filename]
-		} else {
+		if strings.Contains(filename, ".png") {
+			f, err := os.Open(filename)
+			if err != nil {
+				return nil
+			}
 			defer f.Close()
 			t.Image, err = png.Decode(f)
 			if err != nil {
 				return nil
 			}
+		} else {
+			// if not a file then an index into the scenes image list
+			t.Image = scn.ImageList[filename]
 		}
 	}
 
