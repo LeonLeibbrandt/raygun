@@ -2,7 +2,7 @@ package main
 
 import (
 	"image/png"
-	//	"encoding/json"
+	// "encoding/json"
 	"flag"
 	"fmt"
 	"github.com/LeonLeibbrandt/raygun"
@@ -42,7 +42,7 @@ func main() {
 		panic(err)
 	}
 	defer output.Close()
-	
+
 	err = png.Encode(output, rg.Scene.Image)
 	if err != nil {
 		panic(err)

@@ -269,9 +269,9 @@ func (p *Plane) GetFurthest(point *Vector) float64 {
 
 // Texture
 type Texture struct {
-	Scene      *Scene
+	Scene      *Scene `json:"-"`
 	Type       string
-	Material   *Material
+	Material   *Material `json:"-"`
 	Position   *Vector
 	Normal     *Vector
 	Horiz      *Vector `json:"-"`

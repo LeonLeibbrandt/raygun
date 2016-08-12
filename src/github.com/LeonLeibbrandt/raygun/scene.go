@@ -19,8 +19,9 @@ type Scene struct {
 	TraceDepth   int
 	OverSampling int
 	VisionField  float64
-	StartLine    int
-	EndLine      int
+	CalcShadow   bool
+	StartLine    int `json:"-"`
+	EndLine      int `json:"-"`
 	GridWidth    int `json:"-"`
 	GridHeight   int `json:"-"`
 	CameraPos    *Vector
@@ -30,12 +31,11 @@ type Scene struct {
 	Vhor         *Vector `json:"-"`
 	Vver         *Vector `json:"-"`
 	Vp           *Vector `json:"-"`
-	CalcShadow   bool
 	Image        *image.RGBA `json:"-"`
 	GroupList    []*Group
 	LightList    []Light
 	MaterialList []*Material
-	ImageList    map[string]image.Image
+	ImageList    map[string]image.Image `json:"-"`
 }
 
 func NewScene() *Scene {
