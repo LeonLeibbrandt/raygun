@@ -316,12 +316,28 @@ func NewTexture(xp, yp, zp, xn, yn, zn, w, h float64, filename string, scn *Scen
 		}
 	}
 
-	t.Horiz = t.Normal.Cross(scn.CameraUp).Normalize()
-	if t.Horiz.Module() == 0.0 {
-		t.Horiz = t.Normal.Cross(&Vector{0.0, -1.0, 0.0}).Normalize()
+	switch {
+	case t.Normal.Eq(&Vector{1.0, 0.0, 0.0}):
+		t.Horiz = &Vector{0.0, 1.0, 0.0}
+		t.Vert = &Vector{0.0, 0.0, -1.0}
+	case t.Normal.Eq(&Vector{0.0, 1.0, 0.0}):
+		t.Horiz = &Vector{-1.0, 0.0, 0.0}
+		t.Vert = &Vector{0.0, 0.0, -1.0}
+	case t.Normal.Eq(&Vector{0.0, 0.0, 1.0}):
+		t.Horiz = &Vector{-1.0, 0.0, 0.0}
+		t.Vert = &Vector{0.0, 1.0, 0.0}
+	default:
+		vert := &Vector{0.0, 1.0, 0.0}
+		t.Horiz = vert.Cross(t.Normal).Normalize()
+		t.Vert = t.Horiz.Cross(t.Normal).Normalize()
 	}
-	t.Vert = t.Normal.Cross(t.Horiz).Normalize()
-
+	/*
+		t.Horiz = t.Normal.Cross(scn.CameraUp).Normalize()
+		if t.Horiz.Module() == 0.0 {
+			t.Horiz = t.Normal.Cross(&Vector{0.0, -1.0, 0.0}).Normalize()
+		}
+		t.Vert = t.Normal.Cross(t.Horiz).Normalize()
+	*/
 	return t
 }
 
