@@ -245,11 +245,12 @@ func (scn *Scene) parseStream(r *bufio.Reader) {
 		case "texture":
 			pos := ParseVector(data[0:3])
 			nor := ParseVector(data[3:6])
-			wid, _ := strconv.ParseFloat(data[6], 64)
-			hei, _ := strconv.ParseFloat(data[7], 64)
-			fn := data[8]
+			up := ParseVector(data[6:9])
+			wid, _ := strconv.ParseFloat(data[9], 64)
+			hei, _ := strconv.ParseFloat(data[10], 64)
+			fn := data[11]
 			scn.GroupList[groupIndex].ObjectList = append(scn.GroupList[groupIndex].ObjectList,
-				NewTexture(pos.X, pos.Y, pos.Z, nor.X, nor.Y, nor.Z, wid, hei, fn, scn))
+				NewTexture(pos.X, pos.Y, pos.Z, nor.X, nor.Y, nor.Z, up.X, up.Y, up.Z, wid, hei, fn, scn))
 
 		case "cube":
 			mat, _ := strconv.Atoi(data[0])

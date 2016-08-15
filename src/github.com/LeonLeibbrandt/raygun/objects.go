@@ -274,6 +274,7 @@ type Texture struct {
 	Material   *Material `json:"-"`
 	Position   *Vector
 	Normal     *Vector
+	Up         *Vector
 	Horiz      *Vector `json:"-"`
 	Vert       *Vector `json:"-"`
 	Width      float64 // Only two of these will be used for plane, the one in the "normal" direction MUST be 0.0
@@ -284,7 +285,7 @@ type Texture struct {
 	Image      image.Image `json:"-"`
 }
 
-func NewTexture(xp, yp, zp, xn, yn, zn, w, h float64, filename string, scn *Scene) *Texture {
+func NewTexture(xp, yp, zp, xn, yn, zn, ux, uy, uz, w, h float64, filename string, scn *Scene) *Texture {
 	mat, _ := NewMaterial(Color{1.0, 1.0, 1.0}, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 	t := &Texture{
 		Scene:      scn,
@@ -292,6 +293,7 @@ func NewTexture(xp, yp, zp, xn, yn, zn, w, h float64, filename string, scn *Scen
 		Material:   mat,
 		Position:   &Vector{xp, yp, zp},
 		Normal:     (&Vector{xn, yn, zn}).Normalize(),
+		Up:         (&Vector{ux, uy, uz}).Normalize(),
 		Width:      w,
 		Height:     h,
 		halfWidth:  (w / 2.0),
@@ -316,21 +318,26 @@ func NewTexture(xp, yp, zp, xn, yn, zn, w, h float64, filename string, scn *Scen
 		}
 	}
 
-	switch {
-	case t.Normal.Eq(&Vector{1.0, 0.0, 0.0}):
-		t.Horiz = &Vector{0.0, 1.0, 0.0}
-		t.Vert = &Vector{0.0, 0.0, -1.0}
-	case t.Normal.Eq(&Vector{0.0, 1.0, 0.0}):
-		t.Horiz = &Vector{-1.0, 0.0, 0.0}
-		t.Vert = &Vector{0.0, 0.0, -1.0}
-	case t.Normal.Eq(&Vector{0.0, 0.0, 1.0}):
-		t.Horiz = &Vector{-1.0, 0.0, 0.0}
-		t.Vert = &Vector{0.0, 1.0, 0.0}
-	default:
-		vert := &Vector{0.0, 1.0, 0.0}
-		t.Horiz = vert.Cross(t.Normal).Normalize()
-		t.Vert = t.Horiz.Cross(t.Normal).Normalize()
-	}
+	t.Horiz = t.Normal.Cross(t.Up).Normalize()
+	t.Vert = t.Normal.Cross(t.Horiz).Normalize()
+	
+	/*
+		switch {
+		case t.Normal.Eq(&Vector{1.0, 0.0, 0.0}):
+			t.Horiz = &Vector{0.0, 1.0, 0.0}
+			t.Vert = &Vector{0.0, 0.0, -1.0}
+		case t.Normal.Eq(&Vector{0.0, 1.0, 0.0}):
+			t.Horiz = &Vector{-1.0, 0.0, 0.0}
+			t.Vert = &Vector{0.0, 0.0, -1.0}
+		case t.Normal.Eq(&Vector{0.0, 0.0, 1.0}):
+			t.Horiz = &Vector{-1.0, 0.0, 0.0}
+			t.Vert = &Vector{0.0, 1.0, 0.0}
+		default:
+			vert := &Vector{0.0, 1.0, 0.0}
+			t.Horiz = vert.Cross(t.Normal).Normalize()
+			t.Vert = t.Horiz.Cross(t.Normal).Normalize()
+		}
+	*/
 	/*
 		t.Horiz = t.Normal.Cross(scn.CameraUp).Normalize()
 		if t.Horiz.Module() == 0.0 {
@@ -626,6 +633,7 @@ func (y *Cylinder) GetIntersect(r *Ray, g, i int) bool {
 	return true
 
 }
+
 func (y *Cylinder) intersectCap(r *Ray, start bool) bool {
 	if start {
 		return y.StartDisc.GetIntersect(r, 0, 0)
