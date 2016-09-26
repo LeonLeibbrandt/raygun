@@ -27,10 +27,10 @@ type Scene struct {
 	CameraPos    *Vector
 	CameraLook   *Vector
 	CameraUp     *Vector
-	Look         *Vector `json:"-"`
-	Vhor         *Vector `json:"-"`
-	Vver         *Vector `json:"-"`
-	Vp           *Vector `json:"-"`
+	Look         *Vector     `json:"-"`
+	Vhor         *Vector     `json:"-"`
+	Vver         *Vector     `json:"-"`
+	Vp           *Vector     `json:"-"`
 	Image        *image.RGBA `json:"-"`
 	GroupList    []*Group
 	LightList    []Light
@@ -154,10 +154,11 @@ func (scn *Scene) parseStream(r *bufio.Reader) {
 		mat, _ := strconv.Atoi(data[0])
 		pos := ParseVector(data[1:4])
 		nor := ParseVector(data[4:7])
-		rad, _ := strconv.ParseFloat(data[7], 64)
-		wid, _ := strconv.ParseFloat(data[8], 64)
-		hei, _ := strconv.ParseFloat(data[9], 64)
-		return NewPlane(pos.X, pos.Y, pos.Z, nor.X, nor.Y, nor.Z, rad, wid, hei, mat, scn)
+		up := ParseVector(data[7:10])
+		rad, _ := strconv.ParseFloat(data[10], 64)
+		wid, _ := strconv.ParseFloat(data[11], 64)
+		hei, _ := strconv.ParseFloat(data[12], 64)
+		return NewPlane(pos.X, pos.Y, pos.Z, nor.X, nor.Y, nor.Z, up.X, up.Y, up.Z, rad, wid, hei, mat, scn)
 	}
 
 	for err == nil && !isPrefix {

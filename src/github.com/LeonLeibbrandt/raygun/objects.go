@@ -154,6 +154,7 @@ type Plane struct {
 	Base
 	Position   *Vector
 	Normal     *Vector
+	Up         *Vector
 	Horiz      *Vector `json:"-"`
 	Vert       *Vector `json:"-"`
 	Radius     float64
@@ -163,11 +164,12 @@ type Plane struct {
 	halfHeight float64 `json:"-"`
 }
 
-func NewPlane(xp, yp, zp, xn, yn, zn, r, w, h float64, m int, scn *Scene) *Plane {
+func NewPlane(xp, yp, zp, xn, yn, zn, xu, yu, zu, r, w, h float64, m int, scn *Scene) *Plane {
 	p := &Plane{
 		Base:       NewBase(scn, "plane", m),
 		Position:   &Vector{xp, yp, zp},
 		Normal:     (&Vector{xn, yn, zn}).Normalize(),
+		Up:         (&Vector{xu, yu, zu}).Normalize(),
 		Radius:     r,
 		Width:      w,
 		Height:     h,
@@ -175,11 +177,7 @@ func NewPlane(xp, yp, zp, xn, yn, zn, r, w, h float64, m int, scn *Scene) *Plane
 		halfHeight: (h / 2.0),
 	}
 
-	p.Horiz = p.Normal.Cross(scn.CameraUp).Normalize()
-	if p.Horiz.Module() == 0.0 {
-		p.Horiz = p.Normal.Cross(&Vector{0.0, -1.0, 0.0}).Normalize()
-	}
-
+	p.Horiz = p.Normal.Cross(p.Up).Normalize()
 	p.Vert = p.Normal.Cross(p.Horiz).Normalize()
 
 	return p
@@ -206,12 +204,14 @@ func (p *Plane) HitBounds(r *Ray) bool {
 			return false
 		}
 	} else {
-		if math.Abs(u.Dot(p.Horiz)) > p.halfWidth {
-			return false
-		}
+		if p.Width > 0.0 && p.Height > 0.0 {
+			if math.Abs(u.Dot(p.Horiz)) > p.halfWidth {
+				return false
+			}
 
-		if math.Abs(u.Dot(p.Vert)) > p.halfHeight {
-			return false
+			if math.Abs(u.Dot(p.Vert)) > p.halfHeight {
+				return false
+			}
 		}
 	}
 	return true
@@ -238,13 +238,15 @@ func (p *Plane) GetIntersect(r *Ray, g, i int) bool {
 			return false
 		}
 	} else {
-		horiz := u.Dot(p.Horiz)
-		if math.Abs(horiz) > p.halfWidth {
-			return false
-		}
-		vert := u.Dot(p.Vert)
-		if math.Abs(vert) > p.halfHeight {
-			return false
+		if p.Width > 0.0 && p.Height > 0.0 {
+			horiz := u.Dot(p.Horiz)
+			if math.Abs(horiz) > p.halfWidth {
+				return false
+			}
+			vert := u.Dot(p.Vert)
+			if math.Abs(vert) > p.halfHeight {
+				return false
+			}
 		}
 	}
 	r.interColor = p.Material.Color
@@ -320,7 +322,7 @@ func NewTexture(xp, yp, zp, xn, yn, zn, ux, uy, uz, w, h float64, filename strin
 
 	t.Horiz = t.Normal.Cross(t.Up).Normalize()
 	t.Vert = t.Normal.Cross(t.Horiz).Normalize()
-	
+
 	/*
 		switch {
 		case t.Normal.Eq(&Vector{1.0, 0.0, 0.0}):
@@ -548,11 +550,11 @@ func NewCylinder(xp, yp, zp, xd, yd, zd, l, r float64, m int, scn *Scene) *Cylin
 	}
 	pos := c.Position
 	dir := c.Direction.Mul(-1)
-	c.StartDisc = NewPlane(pos.X, pos.Y, pos.Z, dir.X, dir.Y, dir.Z, c.Radius, 0.0, 0.0, c.MaterialIndex, c.Scene)
+	c.StartDisc = NewPlane(pos.X, pos.Y, pos.Z, dir.X, dir.Y, dir.Z, dir.X, dir.Y, dir.Z, c.Radius, 0.0, 0.0, c.MaterialIndex, c.Scene)
 
 	pos = c.Position.Add(c.Direction.Mul(c.Length))
 	dir = c.Direction
-	c.EndDisc = NewPlane(pos.X, pos.Y, pos.Z, dir.X, dir.Y, dir.Z, c.Radius, 0.0, 0.0, c.MaterialIndex, c.Scene)
+	c.EndDisc = NewPlane(pos.X, pos.Y, pos.Z, dir.X, dir.Y, dir.Z, dir.X, dir.Y, dir.Z, c.Radius, 0.0, 0.0, c.MaterialIndex, c.Scene)
 	return c
 }
 
