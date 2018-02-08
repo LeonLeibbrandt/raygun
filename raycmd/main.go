@@ -5,7 +5,7 @@ import (
 	// "encoding/json"
 	"flag"
 	"fmt"
-	"github.com/LeonLeibbrandt/raygun"
+	"github.com/LeonLeibbrandt/raygun/raygun"
 	"os"
 	"runtime"
 )
