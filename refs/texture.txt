@@ -26,9 +26,9 @@ light 40.0 20.0 5.0   0.1 0.1 0.1 ambient
 
 # material: r g b difuseCol specularCol specularD reflectionCol transmitCol IOR
 # White
-material 0.0 1.0 0.0 1.6 0.0 0.0 0.0 0.0 0.0 scenes/text.png
+material 0.0 1.0 0.0 1.6 0.0 0.0 0.0 0.0 0.0 text.png
 # Ground
-material 1.0 1.0 1.0 1.6 0.0 0.0 0.0 0.0 0.0 scenes/text.png
+material 1.0 1.0 1.0 1.6 0.0 0.0 0.0 0.0 0.0 text.png
 
 group floor 0.00 0.00 0.01 true
 cube 1 0.00 0.00 0.00 16.20 16.20 0.03
