@@ -115,5 +115,5 @@ sphere 0 7.6 1.39479 0.803393  0.35
 sphere 2 7.6 1.60521 3.19661  0.35
 
 # plane: material normal_x normal_y normal_z distancia:
-plane 1  0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0
+plane 1  0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0
 

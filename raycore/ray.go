@@ -1,4 +1,4 @@
-package raygun
+package raycore
 
 // RAY
 type Ray struct {

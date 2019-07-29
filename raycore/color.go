@@ -1,4 +1,4 @@
-package raygun
+package raycore
 
 import (
 	"image/color"
@@ -30,7 +30,7 @@ func (c Color) ToPixel() color.RGBA {
 
 func FromColor(col color.Color) Color {
 	c := Color{}
-	r,g,b,_ := col.RGBA()
+	r, g, b, _ := col.RGBA()
 	c.R = float64(r)
 	c.G = float64(g)
 	c.B = float64(b)

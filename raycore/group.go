@@ -1,4 +1,4 @@
-package raygun
+package raycore
 
 import (
 	"math"
@@ -10,9 +10,9 @@ import (
 type Group struct {
 	Scene      *Scene `json:"-"`
 	Name       string
-	Always     bool
 	Center     *Vector
 	ObjectList []Object
+	Always     bool
 	Bounds     GroupBounds `json:"-"`
 }
 

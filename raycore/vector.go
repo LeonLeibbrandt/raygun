@@ -1,4 +1,4 @@
-package raygun
+package raycore
 
 import (
 	"math"
@@ -13,7 +13,7 @@ func (v *Vector) Dot(u *Vector) float64 {
 	return (v.X*u.X + v.Y*u.Y + v.Z*u.Z)
 }
 
-func (v *Vector) Cross(u *Vector) (*Vector) {
+func (v *Vector) Cross(u *Vector) *Vector {
 	r := &Vector{}
 	r.X = u.Y*v.Z - u.Z*v.Y
 	r.Y = u.Z*v.X - u.X*v.Z

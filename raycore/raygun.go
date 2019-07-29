@@ -1,13 +1,11 @@
-package raygun
+package raycore
 
 import (
 	"bytes"
 	"fmt"
-	// "image/png"
 	"io/ioutil"
 	"math"
 	"os"
-	"time"
 )
 
 const (
@@ -47,13 +45,9 @@ func NewRayGunFromScene(scene *Scene, numworkers int) (*RayGun, error) {
 
 // Render renders the scene and returns a jpeg that has been base64 encoded
 func (rg *RayGun) Render() {
-	start := time.Now()
 	for i := 0; i < rg.NumWorkers; i++ {
 		go rg.renderPixel(rg.Line, rg.Done)
 	}
-
-	fmt.Printf("Rendering: %s\n", rg.FileName)
-	fmt.Printf("Line (from %d to %d): ", rg.Scene.StartLine, rg.Scene.EndLine)
 
 	for y := rg.Scene.StartLine; y < rg.Scene.EndLine; y++ {
 		rg.Line <- y
@@ -64,19 +58,6 @@ func (rg *RayGun) Render() {
 	for i := 0; i < rg.NumWorkers; i++ {
 		<-rg.Done
 	}
-	/*
-		output, err := os.Create(rg.FileName + ".png")
-		if err != nil {
-			panic(err)
-		}
-
-		err = png.Encode(output, rg.Scene.Image)
-		if err != nil {
-			panic(err)
-		}
-	*/
-	elapsed := time.Since(start)
-	fmt.Printf("\nTime %s for %v objects\n", elapsed, rg.Scene.ObjectCount())
 }
 
 func (rg *RayGun) calcShadow(r *Ray, collisionObj, collisionGrp int) float64 {
@@ -213,9 +194,6 @@ func (rg *RayGun) renderPixel(line chan int, done chan bool) {
 			c.G /= srq_oversampling
 			c.B /= srq_oversampling
 			rg.Scene.Image.SetRGBA(x, y, c.ToPixel())
-		}
-		if y%100 == 0 {
-			fmt.Printf("%d ", y)
 		}
 	}
 	done <- true

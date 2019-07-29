@@ -1,13 +1,13 @@
 package main
 
 import (
-	"image/png"
-	// "encoding/json"
 	"flag"
 	"fmt"
-	"github.com/LeonLeibbrandt/raygun/raygun"
+	"image/png"
 	"os"
 	"runtime"
+
+	"github.com/LeonLeibbrandt/raygun/raycore"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 		*numcpu = runtime.NumCPU()
 	}
 
-	rg, err := raygun.NewRayGun(*scenefile, *numcpu)
+	rg, err := raycore.NewRayGun(*scenefile, *numcpu)
 	if err != nil {
 		panic(err)
 	}

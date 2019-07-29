@@ -1,4 +1,4 @@
-package raygun
+package raycore
 
 import (
 	"bufio"
@@ -73,8 +73,6 @@ func NewSceneFromFile(sceneFilename string) *Scene {
 	scn.OverSampling = 1 // no OverSampling
 	scn.VisionField = 60
 	scn.CalcShadow = true
-
-	//scn.ObjectList = append(scn.ObjectList, Sphere{0,0.0,0.0,0.0,0.0})
 
 	f, err := os.Open(sceneFilename)
 	if err != nil {
@@ -151,6 +149,7 @@ func (scn *Scene) parseStream(r *bufio.Reader) {
 	line, isPrefix, err := r.ReadLine()
 
 	newplane := func(data []string) *Plane {
+		fmt.Printf("%v\n", data)
 		mat, _ := strconv.Atoi(data[0])
 		pos := ParseVector(data[1:4])
 		nor := ParseVector(data[4:7])

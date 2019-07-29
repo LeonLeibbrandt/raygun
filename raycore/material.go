@@ -1,7 +1,6 @@
-package raygun
+package raycore
 
-import (
-)
+import ()
 
 // Material defines a raytracing material.
 type Material struct {
@@ -18,9 +17,7 @@ func NewMaterial(color Color, difusecol, specularcol, speculard, reflectioncol, 
 		ReflectionCol: reflectioncol,
 		TransmitCol:   transmitcol,
 		IOR:           ior,
-
 	}
 	return m, nil
 
 }
-
